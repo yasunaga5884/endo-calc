@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>内分泌・糖尿病 臨床計算ツール</title>
+<style>
+  :root{
+    --bg:#F5F7F6;--surface:#FFFFFF;--ink:#16211D;--muted:#69766F;--line:#E1E7E4;
+    --accent:#0B6E6E;--accent-soft:#E5F0EF;--readout-bg:#141B18;
+    --ok:#2E7D5B;--warn:#B87309;--alert:#B23A48;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono","Roboto Mono",Menlo,monospace;
+    --sans:"Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP",Meiryo,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;-webkit-font-smoothing:antialiased;padding:28px 20px 40px}
+  .wrap{max-width:760px;margin:0 auto}
+  header.top{margin-bottom:22px}
+  .kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:6px}
+  h1{font-size:23px;font-weight:700;letter-spacing:-.01em;margin:0}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:4px}
+  nav.tabs{display:flex;gap:4px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:5px;margin:20px 0 18px}
+  .tab{flex:1 1 auto;min-width:82px;text-align:center;padding:9px 8px;border-radius:8px;border:none;background:transparent;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:background .18s,color .18s}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{background:var(--accent);color:#fff}
+  .tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 20px;display:none;animation:fade .22s ease}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .panel h2{font-size:16px;margin:0 0 2px}
+  .panelhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:2px}
+  .panelhead h2{margin:0}
+  .clearbtn{border:1px solid var(--line);background:#fff;color:var(--muted);font-family:var(--sans);font-size:12.5px;font-weight:700;padding:7px 15px;border-radius:8px;cursor:pointer;transition:border-color .15s,color .15s,background .15s;flex:none}
+  .clearbtn:hover{border-color:var(--alert);color:var(--alert);background:#FCF3F4}
+  .clearbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .panel .note{color:var(--muted);font-size:12.5px;margin:0 0 18px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:13px 16px}
+  @media (max-width:520px){.grid{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field.full{grid-column:1/-1}
+  label{font-size:12.5px;font-weight:600;color:var(--ink)}
+  label .u{color:var(--muted);font-weight:500}
+  .inp{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:#fff;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+  .inp:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .inp input,.inp select{border:none;outline:none;background:transparent;font-family:var(--mono);font-size:15px;color:var(--ink);padding:9px 11px;width:100%}
+  .inp select{font-family:var(--sans);font-weight:600}
+  .inp input[type=date]{font-family:var(--sans)}
+  .inp .unit{padding:0 11px;color:var(--muted);font-size:12px;white-space:nowrap;border-left:1px solid var(--line);align-self:stretch;display:flex;align-items:center}
+  .seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{flex:1;border:none;background:#fff;padding:9px;font-family:var(--sans);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+  .seg button+button{border-left:1px solid var(--line)}
+  .toggle{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;cursor:pointer;user-select:none}
+  .toggle input{appearance:none;width:38px;height:22px;border-radius:11px;background:var(--line);position:relative;cursor:pointer;transition:background .18s;flex:none}
+  .toggle input:checked{background:var(--accent)}
+  .toggle input::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .18s}
+  .toggle input:checked::after{transform:translateX(16px)}
+  .readout{margin-top:20px;background:var(--readout-bg);border-radius:13px;padding:20px;color:#EAF2EF;position:relative;overflow:hidden}
+  .readout::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px);pointer-events:none}
+  .ro-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .ro-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7E948C;font-weight:700}
+  .ro-main{font-family:var(--mono);font-size:44px;font-weight:600;letter-spacing:-.02em;line-height:1;color:#F4FAF8}
+  .ro-unit{font-family:var(--mono);font-size:15px;color:#9DB2AA}
+  .ro-sub{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px 18px}
+  .ro-sub div{font-size:12.5px;color:#A9BDB5}
+  .ro-sub b{font-family:var(--mono);color:#E4EEEA;font-weight:600}
+  .ro-div{height:1px;background:rgba(255,255,255,.09);margin:16px 0}
+  .ro-second{display:flex;align-items:baseline;gap:10px}
+  .ro-second .v{font-family:var(--mono);font-size:26px;font-weight:600;color:#DCEAE4}
+  .chip{display:inline-flex;align-items:center;gap:7px;margin-top:14px;padding:7px 13px;border-radius:8px;font-size:13.5px;font-weight:700;background:rgba(255,255,255,.06)}
+  .chip .dot{width:9px;height:9px;border-radius:50%}
+  .chip.ok{color:#7EE0AE}.chip.ok .dot{background:#7EE0AE}
+  .chip.warn{color:#F2C572}.chip.warn .dot{background:#F2C572}
+  .chip.alert{color:#F1A0AA}.chip.alert .dot{background:#F1A0AA}
+  .chip.none{color:#8EA29A}.chip.none .dot{background:#8EA29A}
+  .interp{margin-top:11px;font-size:12.5px;color:#93A79F;line-height:1.55}
+  .hint{margin-top:14px;font-size:12px;color:var(--muted);background:var(--accent-soft);border-radius:9px;padding:10px 12px;border-left:3px solid var(--accent)}
+  .weeks{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;margin-top:2px}
+  .wk{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 4px;cursor:pointer;display:flex;flex-direction:column;gap:1px;align-items:center;font-family:var(--sans);transition:border-color .15s,background .15s}
+  .wk .wn{font-size:13px;font-weight:700;color:var(--ink)}
+  .wk .wd{font-size:10.5px;color:var(--muted);font-family:var(--mono)}
+  .wk:hover{border-color:var(--accent)}
+  .wk[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+  .wk[aria-pressed="true"] .wn,.wk[aria-pressed="true"] .wd{color:#fff}
+  .wk:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .periodrow{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;margin-top:14px}
+  .psum{font-size:12.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:9px 13px;flex:1 1 200px}
+  .psum.bad{color:var(--alert);background:#F6E7E9}
+  .optrow{display:flex;flex-wrap:wrap;gap:16px 22px;align-items:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .iline{border:1px solid var(--line);border-radius:12px;padding:14px 14px 12px;margin-top:12px;position:relative;background:#FCFDFC}
+  .iline .igrid{display:grid;grid-template-columns:1fr 1fr;gap:11px 14px}
+  .iline .igrid .full{grid-column:1/-1}
+  .iline .res{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;margin-top:4px;padding-top:11px;border-top:1px dashed var(--line);font-size:13px}
+  .iline .res .n{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--accent)}
+  .iline .res .sub{color:var(--muted);font-size:11.5px;font-family:var(--mono)}
+  .iline .rescol{display:flex;flex-direction:column;gap:2px}
+  .iline .rem{font-size:11.5px;font-family:var(--mono);color:var(--muted)}
+  .iline .rem.tight{color:var(--warn);font-weight:700}
+  .sumhint{font-size:11.5px;font-family:var(--mono);color:var(--accent);font-weight:600;min-height:15px}
+  .rm{position:absolute;top:10px;right:10px;border:none;background:transparent;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}
+  .rm:hover{background:#F0E4E5;color:var(--alert)}
+  .addbtn{margin-top:14px;width:100%;border:1.5px dashed var(--line);background:#fff;color:var(--accent);font-family:var(--sans);font-weight:700;font-size:13.5px;padding:11px;border-radius:10px;cursor:pointer;transition:background .15s,border-color .15s}
+  .addbtn:hover{background:var(--accent-soft);border-color:var(--accent)}
+  .breakdown{margin-top:6px;display:flex;flex-direction:column;gap:6px}
+  .breakdown .bd{display:flex;justify-content:space-between;font-size:12.5px;color:#A9BDB5;border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:6px}
+  .breakdown .bd b{font-family:var(--mono);color:#E4EEEA;font-weight:600}
+  .supply{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+  .supply .sname{font-size:13px;color:#C4D3CD;font-weight:600}
+  .supply .sname span{display:block;font-size:10.5px;color:#7E948C;font-weight:500}
+  .supply .sval{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  .supply .big b{font-family:var(--mono);font-size:20px;color:#F4FAF8;font-weight:600}
+  .supply .big .un{font-size:11px;color:#7E948C;margin-left:3px}
+  .supply .ssub{font-size:11px;color:#8EA29A;font-family:var(--mono)}
+  footer{margin-top:22px;font-size:11.5px;color:var(--muted);line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
+  footer b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="kicker">Endocrine · Diabetes</div>
+    <h1>臨床計算ツール</h1>
+    <div class="sub">外来向けの計算補助。日本糖尿病学会・日本腎臓学会の基準に準拠。</div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="計算ツール">
+    <button class="tab" role="tab" aria-selected="true"  data-tab="carb">カーボカウント</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="renal">eGFR/CCr</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="ogtt">75g OGTT</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="homa">HOMA</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="ins">インスリン処方</button>
+  </nav>
+
+  <!-- CARB -->
+  <section class="panel active" id="carb" role="tabpanel">
+    <h2>カーボカウント・補正インスリン</h2>
+    <p class="note">超速効型インスリンを想定(500ルール / 1800ルール)。ICR・効果値は空欄なら1日総量から自動算出します。</p>
+    <div class="grid">
+      <div class="field"><label>1日総インスリン量 TDD <span class="u">単位/日</span></label><div class="inp"><input id="c_tdd" inputmode="decimal" placeholder="例 40"><span class="unit">U/日</span></div></div>
+      <div class="field"><label>糖質量 <span class="u">摂取carb</span></label><div class="inp"><input id="c_carb" inputmode="decimal" placeholder="例 60"><span class="unit">g</span></div></div>
+      <div class="field"><label>インスリン/カーボ比 ICR <span class="u">空欄=500/TDD</span></label><div class="inp"><input id="c_icr" inputmode="decimal" placeholder="自動"><span class="unit">g/U</span></div></div>
+      <div class="field"><label>インスリン効果値 ISF <span class="u">空欄=1800/TDD</span></label><div class="inp"><input id="c_isf" inputmode="decimal" placeholder="自動"><span class="unit">mg/dL/U</span></div></div>
+      <div class="field"><label>現在血糖</label><div class="inp"><input id="c_bg" inputmode="decimal" placeholder="例 180"><span class="unit">mg/dL</span></div></div>
+      <div class="field"><label>目標血糖</label><div class="inp"><input id="c_target" inputmode="decimal" placeholder="例 120"><span class="unit">mg/dL</span></div></div>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">推奨追加インスリン</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="c_out">—</span><span class="ro-unit">単位</span></div>
+      <div class="ro-sub"><div>糖質分 <b id="c_meal">—</b> U</div><div>補正分 <b id="c_corr">—</b> U</div><div>ICR <b id="c_icr_used">—</b> g/U</div><div>ISF <b id="c_isf_used">—</b></div></div>
+      <div class="interp" id="c_interp"></div>
+    </div>
+    <div class="hint">補正分は現在血糖が目標を上回る場合のみ加算します。低血糖時や運動前などは臨床判断で減量を。</div>
+  </section>
+
+  <!-- eGFR / CCr -->
+  <section class="panel" id="renal" role="tabpanel">
+    <h2>eGFR / クレアチニンクリアランス</h2>
+    <p class="note">eGFR:194×Cr⁻¹·⁰⁹⁴×年齢⁻⁰·²⁸⁷(女性×0.739)。CCr:Cockcroft-Gault(体重が必要)。</p>
+    <div class="grid">
+      <div class="field"><label>血清クレアチニン</label><div class="inp"><input id="e_cr" inputmode="decimal" placeholder="例 0.85"><span class="unit">mg/dL</span></div></div>
+      <div class="field"><label>年齢</label><div class="inp"><input id="e_age" inputmode="decimal" placeholder="例 62"><span class="unit">歳</span></div></div>
+      <div class="field"><label>体重 <span class="u">CCr用</span></label><div class="inp"><input id="e_wt" inputmode="decimal" placeholder="例 58"><span class="unit">kg</span></div></div>
+      <div class="field full"><label>性別</label><div class="seg" id="e_sex"><button data-v="male" aria-pressed="true">男性</button><button data-v="female" aria-pressed="false">女性</button></div></div>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">eGFR(推算GFR)</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="e_out">—</span><span class="ro-unit">mL/min/1.73m²</span></div>
+      <div class="chip none" id="e_chip"><span class="dot"></span><span id="e_stage">入力待ち</span></div>
+      <div class="ro-div"></div>
+      <div class="ro-row"><span class="ro-label">CCr(Cockcroft-Gault)</span></div>
+      <div class="ro-second" style="margin-top:8px"><span class="v" id="e_ccr">—</span><span class="ro-unit">mL/min</span></div>
+      <div class="interp" id="e_interp">体重を入力するとCCrも算出します。薬剤の腎排泄・用量調整はCCrを用いる添付文書が多くあります。</div>
+    </div>
+    <div class="hint">CCrは実測体重による標準式です。肥満例では過大評価しやすく、酵素法Crでは値が高めに出る傾向があるため、必要に応じて理想体重や補正を検討してください。</div>
+  </section>
+
+  <!-- OGTT -->
+  <section class="panel" id="ogtt" role="tabpanel">
+    <h2>75g OGTT 判定</h2>
+    <p class="note">日本糖尿病学会の判定区分。空腹時値と2時間値で分類します。</p>
+    <div class="grid">
+      <div class="field"><label>空腹時血糖 FPG</label><div class="inp"><input id="o_fpg" inputmode="decimal" placeholder="例 108"><span class="unit">mg/dL</span></div></div>
+      <div class="field"><label>2時間値</label><div class="inp"><input id="o_2h" inputmode="decimal" placeholder="例 156"><span class="unit">mg/dL</span></div></div>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">判定区分</span></div>
+      <div class="chip none" id="o_chip" style="margin-top:10px;font-size:17px;padding:10px 16px"><span class="dot"></span><span id="o_type">入力待ち</span></div>
+      <div class="ro-sub" style="margin-top:14px"><div>FPG基準 <b id="o_fpg_j">—</b></div><div>2時間値基準 <b id="o_2h_j">—</b></div></div>
+      <div class="interp" id="o_interp">糖尿病型:FPG≧126 または 2時間≧200 / 正常型:FPG&lt;110 かつ 2時間&lt;140 / 境界型:いずれにも該当せず。</div>
+    </div>
+    <div class="hint">診断確定には別日再検やHbA1c併用が必要です。空腹時100–109は正常高値としてフォロー対象。</div>
+  </section>
+
+  <!-- HOMA -->
+  <section class="panel" id="homa" role="tabpanel">
+    <h2>HOMA-IR / HOMA-β</h2>
+    <p class="note">空腹時採血から算出。空腹時血糖140mg/dL以下で信頼性が高い指標です。</p>
+    <div class="grid">
+      <div class="field"><label>空腹時血糖 FPG</label><div class="inp"><input id="h_fpg" inputmode="decimal" placeholder="例 98"><span class="unit">mg/dL</span></div></div>
+      <div class="field"><label>空腹時インスリン IRI</label><div class="inp"><input id="h_iri" inputmode="decimal" placeholder="例 8.5"><span class="unit">µU/mL</span></div></div>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">HOMA-IR(抵抗性)</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="h_ir">—</span></div>
+      <div class="chip none" id="h_chip"><span class="dot"></span><span id="h_ir_j">入力待ち</span></div>
+      <div class="ro-sub" style="margin-top:16px"><div>HOMA-β(分泌能) <b id="h_beta">—</b> %</div></div>
+      <div class="interp" id="h_interp">HOMA-IR 1.6以下:正常 / 2.5以上:インスリン抵抗性あり。</div>
+    </div>
+    <div class="hint">HOMA-β = 360×IRI ÷(FPG−63)。基準値は概ね40–60%。空腹時血糖が63以下では算出できません。</div>
+  </section>
+
+  <!-- INSULIN Rx -->
+  <section class="panel" id="ins" role="tabpanel">
+    <div class="panelhead"><h2>インスリン処方・物品数計算</h2><button type="button" class="clearbtn" id="i_clear">クリア</button></div>
+    <p class="note">投与期間の週を選ぶと、種類別の必要本数と、マイクロファイン・SMBG穿刺針・センサをまとめて算出します。1日単位数はスペース区切りで自動合計(例:3 3 3 → 9)。</p>
+
+    <div class="periodrow" style="margin-top:0;margin-bottom:6px">
+      <div class="field" style="flex:0 0 190px"><label>開始日 <span class="u">既定 本日</span></label><div class="inp"><input type="date" id="i_start"></div></div>
+    </div>
+    <div class="field full">
+      <label>投与期間 <span class="u">週を選択(既定 8週)</span></label>
+      <div class="weeks" id="i_weeks"></div>
+    </div>
+    <div class="periodrow">
+      <div class="field" style="flex:0 0 190px"><label>次回受診日から計算 <span class="u">週選択より優先</span></label><div class="inp"><input type="date" id="i_visit"></div></div>
+      <div class="psum" id="i_summary">—</div>
+    </div>
+    <div class="optrow">
+      <label class="toggle"><input type="checkbox" id="i_prime" checked><span>空打ちロスを加味</span></label>
+      <div class="field" style="flex:0 0 110px" id="i_prime_wrap"><label>空打ち量 <span class="u">/回</span></label><div class="inp"><input id="i_primeamt" inputmode="decimal" value="2"><span class="unit">U</span></div></div>
+      <div class="field" style="flex:0 0 170px"><label>1日の血糖測定回数 <span class="u">SMBG</span></label><div class="inp"><select id="i_meas"></select></div></div>
+    </div>
+
+    <div id="i_lines"></div>
+    <button class="addbtn" id="i_add">＋ インスリンを追加</button>
+
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">インスリン合計</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="i_total">—</span><span class="ro-unit">本</span></div>
+      <div class="ro-div"></div>
+      <div class="breakdown" id="i_breakdown"></div>
+      <div class="ro-div"></div>
+      <div class="ro-label" style="margin-bottom:6px">付属物品(処方数=不足のない最小量)</div>
+      <div class="supply">
+        <div class="sname">マイクロファイン<span>ペン針・14本単位</span></div>
+        <div class="sval"><span class="big"><b id="i_needles">—</b><span class="un">本</span></span><span class="ssub" id="i_needles_sub"></span></div>
+      </div>
+      <div class="supply">
+        <div class="sname">SMBG穿刺針<span>30本単位</span></div>
+        <div class="sval"><span class="big"><b id="i_lancet">—</b><span class="un">本</span></span><span class="ssub" id="i_lancet_sub"></span></div>
+      </div>
+      <div class="supply">
+        <div class="sname">SMBGセンサ<span>30枚単位</span></div>
+        <div class="sval"><span class="big"><b id="i_sensor">—</b><span class="un">枚</span></span><span class="ssub" id="i_sensor_sub"></span></div>
+      </div>
+      <div class="supply" style="border-bottom:none">
+        <div class="sname">消毒綿<span>注射+穿刺の処置回数分</span></div>
+        <div class="sval"><span class="big"><b id="i_swab">—</b><span class="un">枚</span></span></div>
+      </div>
+      <div class="interp" id="i_interp">処方数は各規格の倍数に切り上げた「不足なく出せる最小量」です。マイクロファインは注射回数×日数、穿刺針・センサは測定回数×日数、消毒綿は(注射+穿刺)回数×日数で算出。予備が必要なら1規格上乗せしてください。</div>
+    </div>
+    <div class="hint">必要本数=切り上げ。単位数/本:一般的なペン・カートリッジ=300、U300製剤(1.5mL)=450、バイアル=1000。CGM併用時はSMBG測定回数を実測分に合わせてください。</div>
+  </section>
+
+  <footer>
+    <b>ご利用にあたって</b> — 本ツールは計算補助であり、診断・治療・調剤の最終判断に代わるものではありません。数値・単位・適用条件をご確認のうえ、臨床判断と併せてお使いください。基準は日本糖尿病学会・日本腎臓学会の一般的な区分に基づいています。
+  </footer>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const zfix = s => String(s==null?'':s)
+    .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+    .replace(/．/g,'.').replace(/　/g,' ');
+  const num = v => { const n=parseFloat(zfix(v)); return isFinite(n)?n:null; };
+  const fmt = (n,d=1) => n===null?"—":(Math.round(n*10**d)/10**d).toLocaleString('ja-JP',{minimumFractionDigits:0,maximumFractionDigits:d});
+  const WD=['日','月','火','水','木','金','土'];
+
+  const tabs=document.querySelectorAll('.tab');
+  tabs.forEach(t=>t.addEventListener('click',()=>{
+    tabs.forEach(x=>x.setAttribute('aria-selected','false'));
+    t.setAttribute('aria-selected','true');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    $(t.dataset.tab).classList.add('active');
+  }));
+  function setChip(el,cls,text){ el.className='chip '+cls; el.querySelector('span:last-child').textContent=text; }
+
+  // CARB
+  function carb(){
+    const tdd=num($('c_tdd').value),carbG=num($('c_carb').value),bg=num($('c_bg').value),tgt=num($('c_target').value);
+    let icr=num($('c_icr').value),isf=num($('c_isf').value);
+    if(icr===null&&tdd) icr=500/tdd; if(isf===null&&tdd) isf=1800/tdd;
+    $('c_icr_used').textContent=icr?fmt(icr,1):"—"; $('c_isf_used').textContent=isf?fmt(isf,0):"—";
+    let meal=null,corr=null,total=null;
+    if(carbG!==null&&icr) meal=carbG/icr;
+    if(bg!==null&&tgt!==null&&isf) corr=Math.max(0,(bg-tgt)/isf);
+    if(meal!==null||corr!==null) total=(meal||0)+(corr||0);
+    $('c_meal').textContent=fmt(meal,1); $('c_corr').textContent=fmt(corr,1);
+    $('c_out').textContent=total===null?"—":fmt(total,1);
+    let msg="";
+    if(bg!==null&&tgt!==null&&bg<tgt) msg="現在血糖が目標を下回っています。補正インスリンは加算していません。低血糖に注意してください。";
+    else if(total!==null) msg="実際の投与は0.5〜1単位刻みへの丸めや、活動量・過去の反応を踏まえて調整してください。";
+    $('c_interp').textContent=msg;
+  }
+  ['c_tdd','c_carb','c_icr','c_isf','c_bg','c_target'].forEach(id=>$(id).addEventListener('input',carb));
+
+  // eGFR / CCr
+  let eSex='male';
+  document.querySelectorAll('#e_sex button').forEach(b=>b.addEventListener('click',()=>{
+    eSex=b.dataset.v;
+    document.querySelectorAll('#e_sex button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true'); renal();
+  }));
+  function renal(){
+    const cr=num($('e_cr').value),age=num($('e_age').value),wt=num($('e_wt').value);
+    if(cr&&age&&cr>0&&age>0){
+      let g=194*Math.pow(cr,-1.094)*Math.pow(age,-0.287); if(eSex==='female') g*=0.739;
+      $('e_out').textContent=fmt(g,1);
+      let cls,stage,txt;
+      if(g>=90){cls='ok';stage='G1 正常または高値';txt='腎機能は保たれています(蛋白尿等で総合評価)。';}
+      else if(g>=60){cls='ok';stage='G2 正常または軽度低下';txt='軽度低下。蛋白尿の有無を併せて評価します。';}
+      else if(g>=45){cls='warn';stage='G3a 軽度〜中等度低下';txt='CKDとして経過観察・原因検索を。';}
+      else if(g>=30){cls='warn';stage='G3b 中等度〜高度低下';txt='薬剤の腎排泄・用量調整に注意。';}
+      else if(g>=15){cls='alert';stage='G4 高度低下';txt='腎臓専門医との連携を検討する段階です。';}
+      else {cls='alert';stage='G5 末期腎不全';txt='腎代替療法の準備を要する領域です。';}
+      setChip($('e_chip'),cls,stage); $('e_interp').textContent=txt;
+    } else { $('e_out').textContent="—"; setChip($('e_chip'),'none','入力待ち'); }
+    if(cr&&age&&wt&&cr>0){ let ccr=(140-age)*wt/(72*cr); if(eSex==='female') ccr*=0.85; $('e_ccr').textContent=fmt(ccr,1); }
+    else { $('e_ccr').textContent="—"; }
+  }
+  ['e_cr','e_age','e_wt'].forEach(id=>$(id).addEventListener('input',renal));
+
+  // OGTT
+  function ogtt(){
+    const f=num($('o_fpg').value),h=num($('o_2h').value);
+    $('o_fpg_j').textContent=f===null?"—":(f>=126?'糖尿病域':f<110?'正常域':'境界域');
+    $('o_2h_j').textContent =h===null?"—":(h>=200?'糖尿病域':h<140?'正常域':'境界域');
+    if(f===null&&h===null){ setChip($('o_chip'),'none','入力待ち'); return; }
+    let cls,type;
+    if((f!==null&&f>=126)||(h!==null&&h>=200)){cls='alert';type='糖尿病型';}
+    else if((f===null||f<110)&&(h===null||h<140)){cls='ok';type='正常型';}
+    else {cls='warn';type='境界型';}
+    setChip($('o_chip'),cls,type);
+    let note='';
+    if(type==='正常型'&&f!==null&&f>=100) note=' 空腹時100–109の正常高値。将来的な耐糖能悪化のフォローを。';
+    if(type==='糖尿病型') note=' 別日再検またはHbA1c≧6.5%の併存で糖尿病と診断します。';
+    if(type==='境界型') note=' IFG/IGTに相当。生活指導と定期フォローの対象です。';
+    $('o_interp').textContent='判定:'+type+'。'+note;
+  }
+  ['o_fpg','o_2h'].forEach(id=>$(id).addEventListener('input',ogtt));
+
+  // HOMA
+  function homa(){
+    const f=num($('h_fpg').value),i=num($('h_iri').value);
+    let ir=null,beta=null;
+    if(f!==null&&i!==null&&f>0) ir=i*f/405;
+    if(f!==null&&i!==null&&(f-63)>0) beta=360*i/(f-63);
+    $('h_ir').textContent=ir===null?"—":fmt(ir,2); $('h_beta').textContent=beta===null?"—":fmt(beta,0);
+    if(ir===null){ setChip($('h_chip'),'none','入力待ち'); return; }
+    let cls,txt;
+    if(ir<=1.6){cls='ok';txt='正常範囲';} else if(ir<2.5){cls='warn';txt='境界(1.6〜2.5)';} else {cls='alert';txt='インスリン抵抗性あり';}
+    setChip($('h_chip'),cls,txt);
+    let extra=(f!==null&&f>140)?' 空腹時血糖が140を超えており、HOMA-IRの解釈には注意が必要です。':'';
+    $('h_interp').textContent='HOMA-IR '+fmt(ir,2)+':'+txt+'。'+extra;
+  }
+  ['h_fpg','h_iri'].forEach(id=>$(id).addEventListener('input',homa));
+
+  // ===== INSULIN Rx =====
+  const today=new Date(); today.setHours(0,0,0,0);
+  function addDays(base,n){ const d=new Date(base); d.setDate(d.getDate()+n); return d; }
+  function mdw(d){ return (d.getMonth()+1)+'/'+d.getDate()+'('+WD[d.getDay()]+')'; }
+  function isoLocal(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function parseSum(str){
+    const t=zfix(str).trim().split(/[\s+,、，]+/).filter(Boolean);
+    const nums=t.map(x=>parseFloat(x)).filter(n=>isFinite(n));
+    if(!nums.length) return {sum:null,count:0};
+    return {sum:nums.reduce((a,b)=>a+b,0),count:nums.length};
+  }
+  const INJ_DEFAULT={'持効型':'1','超速効型':'3'};
+
+  const state={mode:'week',weeks:8};
+  const startInp=$('i_start'); startInp.value=isoLocal(today);
+  function getStart(){ const v=startInp.value; return v?new Date(v+'T00:00:00'):today; }
+  const weekBox=$('i_weeks');
+  for(let w=1;w<=14;w++){
+    const b=document.createElement('button');
+    b.className='wk'; b.type='button'; b.dataset.w=w; b.setAttribute('aria-pressed','false');
+    b.innerHTML=`<span class="wn">${w}週</span><span class="wd" data-wd></span>`;
+    b.addEventListener('click',()=>{ state.mode='week'; state.weeks=w; $('i_visit').value=''; syncPeriod(); calcIns(); });
+    weekBox.appendChild(b);
+  }
+  function updateWeekLabels(){
+    const st=getStart();
+    document.querySelectorAll('#i_weeks .wk').forEach(b=>{ b.querySelector('[data-wd]').textContent=mdw(addDays(st,Number(b.dataset.w)*7)); });
+  }
+  const visit=$('i_visit');
+  function updateVisitMin(){ visit.min=isoLocal(addDays(getStart(),1)); }
+  startInp.addEventListener('input',()=>{ updateWeekLabels(); updateVisitMin(); syncPeriod(); calcIns(); });
+  visit.addEventListener('input',()=>{ state.mode=visit.value?'date':'week'; syncPeriod(); calcIns(); });
+  updateWeekLabels(); updateVisitMin();
+
+  // measurement select 0-8 (default 4)
+  const measSel=$('i_meas');
+  for(let m=0;m<=8;m++){ const o=document.createElement('option'); o.value=m; o.textContent=m+' 回'; if(m===4)o.selected=true; measSel.appendChild(o); }
+  measSel.addEventListener('change',calcIns);
+
+  function effDays(){
+    const st=getStart();
+    if(state.mode==='date'&&visit.value){ return Math.round((new Date(visit.value+'T00:00:00')-st)/86400000); }
+    return state.weeks*7;
+  }
+  function syncPeriod(){
+    document.querySelectorAll('#i_weeks .wk').forEach(b=>{
+      b.setAttribute('aria-pressed', (state.mode==='week'&&Number(b.dataset.w)===state.weeks)?'true':'false');
+    });
+    weekBox.style.opacity=(state.mode==='date'&&visit.value)?'.5':'1';
+    const days=effDays(), sum=$('i_summary'), st=getStart();
+    if(state.mode==='date'&&visit.value){
+      const v=new Date(visit.value+'T00:00:00');
+      if(days>0){ sum.className='psum'; sum.textContent=`${mdw(st)}開始 → 次回受診 ${v.getFullYear()}/${mdw(v)} = ${days}日分`; }
+      else { sum.className='psum bad'; sum.textContent='受診日が開始日以前です。日付を確認してください。'; }
+    } else {
+      const d=addDays(st,days);
+      sum.className='psum'; sum.textContent=`${mdw(st)}開始 → ${state.weeks}週後 ${d.getFullYear()}/${mdw(d)} = ${days}日分`;
+    }
+  }
+
+  const linesBox=$('i_lines');
+  function lineTemplate(type){
+    type=type||'超速効型';
+    const injDef=INJ_DEFAULT[type];
+    const wrap=document.createElement('div'); wrap.className='iline'; wrap.dataset.type=type;
+    const injOpts=[1,2,3,4,5].map(n=>`<option value="${n}" ${String(n)===injDef?'selected':''}>${n} 回</option>`).join('');
+    wrap.innerHTML=`
+      <button class="rm" type="button" title="削除">×</button>
+      <div class="igrid">
+        <div class="field full"><label>種類</label>
+          <div class="seg i_type">
+            <button type="button" data-t="持効型" aria-pressed="${type==='持効型'}">持効型</button>
+            <button type="button" data-t="超速効型" aria-pressed="${type==='超速効型'}">超速効型</button>
+          </div>
+        </div>
+        <div class="field"><label>1日単位数 <span class="u">スペース区切り可</span></label><div class="inp"><input class="i_units" placeholder="例 12 または 3 3 3"><span class="unit">U/日</span></div><span class="sumhint" data-sumhint></span></div>
+        <div class="field"><label>1日注射回数</label><div class="inp"><select class="i_inj">${injOpts}</select></div></div>
+        <div class="field full"><label>単位数/本(規格)</label><div class="inp"><select class="i_cap">
+          <option value="300">300単位(ペン・カートリッジ)</option>
+          <option value="450">450単位(U300・1.5mL)</option>
+          <option value="1000">1000単位(バイアル)</option>
+        </select></div></div>
+        <div class="res"><div class="rescol"><span class="sub" data-sub>—</span><span class="rem" data-rem></span></div><span class="n" data-n>— 本</span></div>
+      </div>`;
+    wrap.querySelectorAll('.i_type button').forEach(b=>b.addEventListener('click',()=>{
+      const t=b.dataset.t; wrap.dataset.type=t;
+      wrap.querySelectorAll('.i_type button').forEach(x=>x.setAttribute('aria-pressed', x.dataset.t===t?'true':'false'));
+      wrap.querySelector('.i_inj').value=INJ_DEFAULT[t];
+      calcIns();
+    }));
+    wrap.querySelector('.rm').addEventListener('click',()=>{ wrap.remove(); calcIns(); });
+    wrap.querySelectorAll('input,select').forEach(el=>{ el.addEventListener('input',calcIns); el.addEventListener('change',calcIns); });
+    linesBox.appendChild(wrap); return wrap;
+  }
+
+  function setSupply(id,need,pack,unit){
+    const bEl=$(id), subEl=$(id+'_sub');
+    if(need>0){ const packs=Math.ceil(need/pack), rx=packs*pack; bEl.textContent=fmt(rx,0); if(subEl) subEl.textContent=`必要 ${fmt(need,0)}${unit} ・ ${pack}${unit}×${packs}`; }
+    else { bEl.textContent='—'; if(subEl) subEl.textContent=''; }
+  }
+  function calcIns(){
+    const days=effDays(), validDays=days>0;
+    const usePrime=$('i_prime').checked;
+    const primeAmt=usePrime?(num($('i_primeamt').value)||0):0;
+    $('i_prime_wrap').style.opacity=usePrime?'1':'.4';
+    const typeTotals={'持効型':0,'超速効型':0};
+    let totalPens=0,needles=0,anyPen=false;
+    document.querySelectorAll('#i_lines .iline').forEach(row=>{
+      const type=row.dataset.type;
+      const ps=parseSum(row.querySelector('.i_units').value);
+      const units=ps.sum;
+      const inj=num(row.querySelector('.i_inj').value)||0;
+      const cap=num(row.querySelector('.i_cap').value)||300;
+      const hint=row.querySelector('[data-sumhint]');
+      hint.textContent=(ps.count>1&&ps.sum!==null)?`= 合計 ${fmt(ps.sum,1)} U/日`:'';
+      const subEl=row.querySelector('[data-sub]'),nEl=row.querySelector('[data-n]'),remEl=row.querySelector('[data-rem]');
+      if(units!==null&&validDays){
+        const dailyUse=units+primeAmt*inj;
+        const totalUnits=dailyUse*days;
+        const pens=Math.ceil(totalUnits/cap);
+        totalPens+=pens; typeTotals[type]+=pens; needles+=inj*days; anyPen=true;
+        subEl.textContent=`総${fmt(totalUnits,0)}U ÷ ${cap}`;
+        nEl.textContent=`${pens} 本`;
+        const leftover=pens*cap-totalUnits;
+        if(dailyUse>0){
+          const bufDays=leftover/dailyUse, tight=bufDays<3;
+          const bufTxt=bufDays<1?'1日未満':`約${fmt(bufDays,0)}日分`;
+          remEl.textContent=`余り ${fmt(leftover,0)}U(${bufTxt})${tight?' ・予備1本推奨':''}`;
+          remEl.className='rem'+(tight?' tight':'');
+        } else { remEl.textContent=`余り ${fmt(leftover,0)}U`; remEl.className='rem'; }
+      } else { subEl.textContent='—'; nEl.textContent='— 本'; remEl.textContent=''; }
+    });
+    // breakdown by type
+    const bd=$('i_breakdown'); bd.innerHTML='';
+    ['持効型','超速効型'].forEach(t=>{
+      if(typeTotals[t]>0){ const d=document.createElement('div'); d.className='bd'; d.innerHTML=`<span>${t}</span><b>${typeTotals[t]} 本</b>`; bd.appendChild(d); }
+    });
+    if(!anyPen) bd.innerHTML='<div class="bd" style="color:#7E948C;border:none"><span>1日単位数を入力してください</span></div>';
+    $('i_total').textContent=anyPen?fmt(totalPens,0):"—";
+    // supplies with pack rounding
+    const meas=num(measSel.value)||0;
+    const smbg=validDays?meas*days:0;
+    const swab=needles+smbg;
+    setSupply('i_needles',needles,14,'本');
+    setSupply('i_lancet',smbg,30,'本');
+    setSupply('i_sensor',smbg,30,'枚');
+    $('i_swab').textContent=(swab>0)?fmt(swab,0):"—";
+  }
+  $('i_add').addEventListener('click',()=>{ lineTemplate('超速効型'); calcIns(); });
+  ['i_prime','i_primeamt'].forEach(id=>$(id).addEventListener('input',calcIns));
+  function resetIns(){
+    linesBox.innerHTML='';
+    lineTemplate('持効型'); lineTemplate('超速効型');
+    startInp.value=isoLocal(today); visit.value='';
+    state.mode='week'; state.weeks=8; measSel.value='4';
+    $('i_prime').checked=true; $('i_primeamt').value='2';
+    updateWeekLabels(); updateVisitMin(); syncPeriod(); calcIns();
+  }
+  $('i_clear').addEventListener('click',resetIns);
+  lineTemplate('持効型');
+  lineTemplate('超速効型');
+  syncPeriod(); calcIns();
+})();
+</script>
+</body>
+</html>
