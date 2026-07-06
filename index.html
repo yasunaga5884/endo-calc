@@ -112,6 +112,12 @@
   .supply .big b{font-family:var(--mono);font-size:20px;color:#F4FAF8;font-weight:600}
   .supply .big .un{font-size:11px;color:#7E948C;margin-left:3px}
   .supply .ssub{font-size:11px;color:#8EA29A;font-family:var(--mono)}
+  .nsub{font-size:12.5px;font-weight:700;color:var(--accent);margin:20px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
+  .nsub .u{font-weight:500;color:var(--muted)}
+  .corrbtns{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
+  .corrbtns button{border:1px solid var(--accent);background:#fff;color:var(--accent);font-family:var(--sans);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;cursor:pointer}
+  .corrbtns button:hover{background:var(--accent-soft)}
+  .n_iline .res .sub{font-family:var(--mono)}
   footer{margin-top:22px;font-size:11.5px;color:var(--muted);line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
   footer b{color:var(--ink)}
 </style>
@@ -127,6 +133,7 @@
   <nav class="tabs" role="tablist" aria-label="計算ツール">
     <button class="tab" role="tab" aria-selected="true"  data-tab="carb">カーボカウント</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="renal">eGFR/CCr</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="na">Na補正</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ogtt">75g OGTT</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="homa">HOMA</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ins">インスリン処方</button>
@@ -178,6 +185,76 @@
       <div class="interp" id="e_neph_interp">eGFR と尿アルブミン値から病期を判定します(糖尿病性腎症合同委員会 2014年改訂)。</div>
     </div>
     <div class="hint">CCrは実測体重による標準式です。肥満例では過大評価しやすく、酵素法Crでは値が高めに出る傾向があるため、必要に応じて理想体重や補正を検討してください。</div>
+  </section>
+
+  <!-- Na CORRECTION -->
+  <section class="panel" id="na" role="tabpanel">
+    <div class="panelhead"><h2>ナトリウム補正(物質収支)</h2><button type="button" class="clearbtn" id="n_clear">クリア</button></div>
+    <p class="note">輸液・尿・不感蒸泄の物質収支から評価期間内の血清Na変化を予測します。ΔNaが補正速度の安全域を超えるとチップで警告(Adrogué-Madias / Nguyen-Kurtzの生理学的アプローチ)。各量は「量＋時間」で入力し、内部で速度に換算して評価期間に投影します。</p>
+    <div class="grid">
+      <div class="field"><label>現在血清Na</label><div class="inp"><input id="n_na" inputmode="decimal" placeholder="例 120"><span class="unit">mEq/L</span></div></div>
+      <div class="field"><label>目標血清Na <span class="u">任意</span></label><div class="inp"><input id="n_target" inputmode="decimal" placeholder="例 128"><span class="unit">mEq/L</span></div></div>
+      <div class="field"><label>体重</label><div class="inp"><input id="n_wt" inputmode="decimal" placeholder="例 58"><span class="unit">kg</span></div></div>
+      <div class="field"><label>年齢 <span class="u">体液量係数</span></label><div class="inp"><input id="n_age" inputmode="decimal" placeholder="例 62"><span class="unit">歳</span></div></div>
+      <div class="field"><label>血糖 <span class="u">補正Na用・任意</span></label><div class="inp"><input id="n_glu" inputmode="decimal" placeholder="例 250"><span class="unit">mg/dL</span></div></div>
+      <div class="field"><label>評価期間 <span class="u">既定 24h</span></label><div class="inp"><input id="n_T" inputmode="decimal" value="24"><span class="unit">時間</span></div></div>
+      <div class="field full"><label>性別 <span class="u">男0.6/女0.5・65歳以上は−0.05</span></label><div class="seg" id="n_sex"><button data-v="male" aria-pressed="true">男性</button><button data-v="female" aria-pressed="false">女性</button></div></div>
+    </div>
+    <div class="hint" id="n_corr_box" style="display:none">
+      高血糖補正Na — Katz(1.6): <b id="n_corr_katz">—</b> ／ Hillier(2.4): <b id="n_corr_hillier">—</b> mEq/L
+      <span class="corrbtns"><button type="button" id="n_use_katz">1.6を現在Naへ</button><button type="button" id="n_use_hillier">2.4を現在Naへ</button></span>
+      <div style="margin-top:6px;font-size:11px">血糖が高いほど実測は2.4係数に近づきます。どちらを開始Naに用いるかは臨床判断で。</div>
+    </div>
+
+    <div class="nsub">輸液 <span class="u">「＋」で併用追加可</span></div>
+    <div id="n_inf_lines"></div>
+    <button class="addbtn" id="n_inf_add">＋ 輸液を追加</button>
+
+    <div class="nsub">経口・飲水 <span class="u">自由水(Na 0)として算入</span></div>
+    <div class="grid">
+      <div class="field"><label>飲水量</label><div class="inp"><input id="n_drink_vol" inputmode="decimal" placeholder="例 500"><span class="unit">mL</span></div></div>
+      <div class="field"><label>時間</label><div class="inp"><input id="n_drink_hr" inputmode="decimal" placeholder="例 24"><span class="unit">時間</span></div></div>
+    </div>
+
+    <div class="nsub">尿</div>
+    <div class="grid">
+      <div class="field"><label>尿量</label><div class="inp"><input id="n_ur_vol" inputmode="decimal" placeholder="例 1500"><span class="unit">mL</span></div></div>
+      <div class="field"><label>時間</label><div class="inp"><input id="n_ur_hr" inputmode="decimal" placeholder="例 24"><span class="unit">時間</span></div></div>
+      <div class="field"><label>尿Na</label><div class="inp"><input id="n_ur_na" inputmode="decimal" placeholder="例 40"><span class="unit">mEq/L</span></div></div>
+      <div class="field"><label>尿K</label><div class="inp"><input id="n_ur_k" inputmode="decimal" placeholder="例 20"><span class="unit">mEq/L</span></div></div>
+    </div>
+
+    <div class="optrow">
+      <label class="toggle"><input type="checkbox" id="n_insens" checked><span>不感蒸泄(純水喪失)を加味</span></label>
+      <div class="field" style="flex:0 0 170px" id="n_insens_wrap"><label>不感蒸泄量 <span class="u">既定15mL/kg/日</span></label><div class="inp"><input id="n_insens_val" inputmode="decimal" placeholder="自動"><span class="unit">mL/日</span></div></div>
+    </div>
+
+    <div class="nsub">その他喪失 <span class="u">嘔吐・下痢・ドレーン等・任意</span></div>
+    <div class="grid">
+      <div class="field"><label>喪失量</label><div class="inp"><input id="n_ol_vol" inputmode="decimal" placeholder="量"><span class="unit">mL</span></div></div>
+      <div class="field"><label>時間</label><div class="inp"><input id="n_ol_hr" inputmode="decimal" placeholder="時間"><span class="unit">時間</span></div></div>
+      <div class="field"><label>Na</label><div class="inp"><input id="n_ol_na" inputmode="decimal" placeholder="mEq/L"><span class="unit">mEq/L</span></div></div>
+      <div class="field"><label>K</label><div class="inp"><input id="n_ol_k" inputmode="decimal" placeholder="mEq/L"><span class="unit">mEq/L</span></div></div>
+    </div>
+
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">予測血清Na(評価期間末)</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="n_final">—</span><span class="ro-unit">mEq/L</span></div>
+      <div class="chip none" id="n_chip"><span class="dot"></span><span id="n_chip_t">入力待ち</span></div>
+      <div class="ro-sub" style="margin-top:14px">
+        <div>ΔNa(評価期間) <b id="n_delta_t">—</b> mEq/L</div>
+        <div>24h換算 <b id="n_delta24">—</b> mEq/L/日</div>
+        <div>総体液量TBW <b id="n_tbw">—</b> L</div>
+      </div>
+      <div class="ro-div"></div>
+      <div class="ro-sub">
+        <div>安全上限速度(主輸液) <b id="n_maxrate">—</b></div>
+        <div>自由水欠乏量 <b id="n_fwd">—</b></div>
+        <div>電解質フリー水クリアランス <b id="n_efwc">—</b></div>
+      </div>
+      <div class="interp" id="n_interp">現在Na・体重を入力し、輸液や尿などを加えると予測します。</div>
+    </div>
+    <div class="hint">補正速度の上限は概ね 低Na血症で8〜10 mEq/L/日未満、高Na血症で10〜12 mEq/L/日未満(浸透圧性脱髄症候群・脳浮腫の回避)。予測は「速度一定」の近似であり、電解質・体液・尿量は経時的に再評価してください。安全上限速度は最初の輸液行を主輸液とみなし、他の入出量を固定して24h上昇/低下を安全域内に収める上限です。輸液のNa/K濃度は各製剤の添付文書でご確認ください。</div>
   </section>
 
   <!-- OGTT -->
@@ -400,6 +477,178 @@
     $('h_interp').textContent='HOMA-IR '+fmt(ir,2)+':'+txt+'。'+extra;
   }
   ['h_fpg','h_iri'].forEach(id=>$(id).addEventListener('input',homa));
+
+  // ===== Na CORRECTION (物質収支) =====
+  // 輸液プリセット(Na/K, mEq/L)。値は各製剤の添付文書で要確認。
+  const FLUIDS=[
+    {name:'生理食塩水 (0.9%)', na:154, k:0},
+    {name:'3%食塩水',          na:513, k:0},
+    {name:'5%ブドウ糖',         na:0,   k:0},
+    {name:'0.45%食塩水',        na:77,  k:0},
+    {name:'乳酸リンゲル液',      na:130, k:4},
+    {name:'リプラス1号',        na:90,  k:0},
+    {name:'ソルデム3',          na:50,  k:0},
+    {name:'ソルデム3A',         na:35,  k:20},
+    {name:'ビーフリード',        na:35,  k:20},
+  ];
+  let nSex='male', nCorrK=null, nCorrH=null;
+  document.querySelectorAll('#n_sex button').forEach(b=>b.addEventListener('click',()=>{
+    nSex=b.dataset.v;
+    document.querySelectorAll('#n_sex button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true'); calcNa();
+  }));
+  function nTBWcoef(){
+    const age=num($('n_age').value), elderly=age!==null&&age>=65;
+    if(nSex==='male') return elderly?0.5:0.6;
+    return elderly?0.45:0.5;
+  }
+  const nLinesBox=$('n_inf_lines');
+  function nFluidOptions(){
+    return FLUIDS.map((f,i)=>`<option value="${i}" data-na="${f.na}" data-k="${f.k}">${f.name}（Na ${f.na}${f.k?' / K '+f.k:''}）</option>`).join('')
+      + `<option value="custom">カスタム(手入力)</option>`;
+  }
+  function nLineConc(row){
+    const sel=row.querySelector('.nf_sel');
+    if(sel.value==='custom') return {na:num(row.querySelector('.nf_na').value)||0, k:num(row.querySelector('.nf_k').value)||0};
+    const o=sel.options[sel.selectedIndex];
+    return {na:Number(o.dataset.na), k:Number(o.dataset.k)};
+  }
+  function nLineTemplate(selVal){
+    const wrap=document.createElement('div'); wrap.className='iline n_iline';
+    wrap.innerHTML=`
+      <button class="rm" type="button" title="削除">×</button>
+      <div class="igrid">
+        <div class="field full"><label>輸液</label><div class="inp"><select class="nf_sel">${nFluidOptions()}</select></div></div>
+        <div class="field nf_custom" style="display:none"><label>Na</label><div class="inp"><input class="nf_na" inputmode="decimal" placeholder="mEq/L"><span class="unit">mEq/L</span></div></div>
+        <div class="field nf_custom" style="display:none"><label>K</label><div class="inp"><input class="nf_k" inputmode="decimal" placeholder="mEq/L"><span class="unit">mEq/L</span></div></div>
+        <div class="field"><label>量</label><div class="inp"><input class="nf_vol" inputmode="decimal" placeholder="例 1000"><span class="unit">mL</span></div></div>
+        <div class="field"><label>時間</label><div class="inp"><input class="nf_hr" inputmode="decimal" placeholder="例 24"><span class="unit">時間</span></div></div>
+        <div class="res"><span class="sub" data-info>量と時間を入力</span><span class="n" data-conc>—</span></div>
+      </div>`;
+    const selEl=wrap.querySelector('.nf_sel');
+    if(selVal!=null) selEl.value=selVal;
+    function syncCustom(){ const isC=selEl.value==='custom'; wrap.querySelectorAll('.nf_custom').forEach(e=>e.style.display=isC?'':'none'); }
+    syncCustom();
+    selEl.addEventListener('change',()=>{ syncCustom(); calcNa(); });
+    wrap.querySelector('.rm').addEventListener('click',()=>{ wrap.remove(); calcNa(); });
+    wrap.querySelectorAll('input,select').forEach(el=>{ el.addEventListener('input',calcNa); el.addEventListener('change',calcNa); });
+    nLinesBox.appendChild(wrap); return wrap;
+  }
+  function nClearOut(msg){
+    setChip($('n_chip'),'none','入力待ち');
+    ['n_final','n_delta_t','n_delta24','n_tbw','n_maxrate','n_fwd','n_efwc'].forEach(id=>$(id).textContent='—');
+    $('n_interp').textContent=msg;
+  }
+  function calcNa(){
+    const na0=num($('n_na').value), wt=num($('n_wt').value), target=num($('n_target').value), glu=num($('n_glu').value);
+    let T=num($('n_T').value); if(T===null||T<=0) T=24;
+    // 高血糖補正Na
+    const cbox=$('n_corr_box');
+    if(glu!==null&&glu>100){
+      cbox.style.display='';
+      const inc16=1.6*(glu-100)/100, inc24=2.4*(glu-100)/100;
+      if(na0!==null){ nCorrK=na0+inc16; nCorrH=na0+inc24; $('n_corr_katz').textContent=fmt(nCorrK,1); $('n_corr_hillier').textContent=fmt(nCorrH,1); }
+      else { nCorrK=nCorrH=null; $('n_corr_katz').textContent='+'+fmt(inc16,1); $('n_corr_hillier').textContent='+'+fmt(inc24,1); }
+    } else { cbox.style.display='none'; nCorrK=nCorrH=null; }
+    // 不感蒸泄欄の表示
+    $('n_insens_wrap').style.opacity=$('n_insens').checked?'1':'.4';
+    // フロー速度の集計(L/h, mEq/h)。firstは主輸液(逆算の被積分)、_oはそれ以外の固定入量
+    let inRate=0,inSolRate=0,outRate=0,outSolRate=0;
+    let firstConc=null,inRate_o=0,inSolRate_o=0,firstSet=false;
+    document.querySelectorAll('#n_inf_lines .n_iline').forEach(row=>{
+      const c=nLineConc(row), vol=num(row.querySelector('.nf_vol').value), hr=num(row.querySelector('.nf_hr').value);
+      const info=row.querySelector('[data-info]'), conc=row.querySelector('[data-conc]');
+      conc.textContent=`Na+K ${fmt(c.na+c.k,0)}`;
+      if(vol!==null&&hr!==null&&hr>0){
+        const rv=(vol/hr)/1000; // L/h
+        info.textContent=`${fmt(vol/hr,0)} mL/h → ${fmt(vol/hr*T,0)} mL/${fmt(T,0)}h`;
+        inRate+=rv; inSolRate+=rv*(c.na+c.k);
+        if(!firstSet){ firstConc=c.na+c.k; firstSet=true; }
+        else { inRate_o+=rv; inSolRate_o+=rv*(c.na+c.k); }
+      } else info.textContent='量と時間を入力';
+    });
+    // 飲水(自由水, 固定入量)
+    { const dv=num($('n_drink_vol').value), dh=num($('n_drink_hr').value);
+      if(dv!==null&&dh!==null&&dh>0){ const rv=(dv/dh)/1000; inRate+=rv; inRate_o+=rv; } }
+    // 尿(喪失)
+    const uv=num($('n_ur_vol').value), uh=num($('n_ur_hr').value), un=num($('n_ur_na').value)||0, uk=num($('n_ur_k').value)||0;
+    if(uv!==null&&uh!==null&&uh>0){ const rv=(uv/uh)/1000; outRate+=rv; outSolRate+=rv*(un+uk); }
+    // 不感蒸泄(純水喪失)
+    if($('n_insens').checked&&wt!==null){ let iv=num($('n_insens_val').value); if(iv===null) iv=15*wt; outRate+=(iv/24)/1000; }
+    // その他喪失
+    { const ov=num($('n_ol_vol').value), oh=num($('n_ol_hr').value), on=num($('n_ol_na').value)||0, ok=num($('n_ol_k').value)||0;
+      if(ov!==null&&oh!==null&&oh>0){ const rv=(ov/oh)/1000; outRate+=rv; outSolRate+=rv*(on+ok); } }
+
+    if(na0===null||wt===null||wt<=0){ nClearOut('現在Naと体重を入力すると予測します。'); return; }
+    const tbw=wt*nTBWcoef();
+    $('n_tbw').textContent=fmt(tbw,1);
+    // 期間Hでの期末Na
+    function naAt(H){
+      const fv=tbw+inRate*H-outRate*H;
+      if(fv<=0) return null;
+      return (tbw*na0+inSolRate*H-outSolRate*H)/fv;
+    }
+    const finalNa=naAt(T), na24=naAt(24);
+    if(finalNa===null){ setChip($('n_chip'),'alert','体液量エラー'); $('n_final').textContent='—'; $('n_delta_t').textContent='—'; $('n_delta24').textContent='—'; $('n_maxrate').textContent='—'; $('n_fwd').textContent='—'; $('n_efwc').textContent='—'; $('n_interp').textContent='最終体液量が0以下です。喪失量・時間を確認してください。'; return; }
+    const deltaT=finalNa-na0, delta24=(na24!==null)?na24-na0:deltaT*24/T;
+    $('n_final').textContent=fmt(finalNa,1);
+    $('n_delta_t').textContent=(deltaT>=0?'+':'')+fmt(deltaT,1);
+    $('n_delta24').textContent=(delta24>=0?'+':'')+fmt(delta24,1);
+    // 補正方向と安全域
+    let dir=null; if(na0<135) dir='hypo'; else if(na0>145) dir='hyper';
+    let cls='none',ctext,itext;
+    if(dir==='hypo'){
+      const rise=delta24;
+      if(rise<0){cls='warn';ctext='Naが低下(補正が進んでいません)';}
+      else if(rise<=8){cls='ok';ctext='安全域(24hで≤8)';}
+      else if(rise<=10){cls='warn';ctext='やや速い(24hで8超)';}
+      else {cls='alert';ctext='過補正リスク(24hで10超・ODS)';}
+      itext='低Na血症の補正上限は概ね8〜10 mEq/L/日。慢性・低栄養・低K・アルコール多飲例では過補正で浸透圧性脱髄症候群(ODS)のリスクが高まります。';
+    } else if(dir==='hyper'){
+      const fall=-delta24;
+      if(fall<0){cls='warn';ctext='Naが上昇(補正が進んでいません)';}
+      else if(fall<=10){cls='ok';ctext='安全域(24hで≤10)';}
+      else if(fall<=12){cls='warn';ctext='やや速い(24hで10超)';}
+      else {cls='alert';ctext='急速補正リスク(24hで12超・脳浮腫)';}
+      itext='高Na血症の補正上限は概ね10〜12 mEq/L/日。急速な低下は脳浮腫のリスクとなります。';
+    } else { cls='none'; ctext='基準範囲(135–145)'; itext='現在Naは基準範囲です。補正速度の警告は低Na(<135)・高Na(>145)で有効になります。'; }
+    setChip($('n_chip'),cls,ctext);
+    // 逆算: 主輸液の安全上限速度(24h基準, 警告閾値を上限とする)
+    let mr='—';
+    if(dir&&firstConc!==null){
+      const limit=dir==='hypo'?8:-10, targetNa=na0+limit;
+      const D0=tbw+inRate_o*24-outRate*24;
+      const baseNa=tbw*na0+inSolRate_o*24-outSolRate*24;
+      const denom=firstConc-targetNa;
+      if(Math.abs(denom)>1e-9){
+        const V=(targetNa*D0-baseNa)/denom; // 24hあたりL
+        if(V>0&&isFinite(V)) mr=fmt(V*1000/24,0)+' mL/h';
+        else mr='規定不可';
+      } else mr='規定不可';
+    }
+    $('n_maxrate').textContent=mr;
+    // 自由水欠乏量(高Na)
+    if(dir==='hyper'){ const tn=(target&&target>0)?target:140; $('n_fwd').textContent=fmt(tbw*(na0/tn-1),1)+' L'; }
+    else $('n_fwd').textContent='—';
+    // 電解質フリー水クリアランス(尿)
+    if(uv!==null&&uh!==null&&uh>0&&na0>0) $('n_efwc').textContent=fmt((uv/uh)*(1-(un+uk)/na0),0)+' mL/h';
+    else $('n_efwc').textContent='—';
+    $('n_interp').textContent=itext;
+  }
+  ['n_na','n_target','n_wt','n_age','n_glu','n_T','n_drink_vol','n_drink_hr','n_ur_vol','n_ur_hr','n_ur_na','n_ur_k','n_insens','n_insens_val','n_ol_vol','n_ol_hr','n_ol_na','n_ol_k'].forEach(id=>$(id).addEventListener('input',calcNa));
+  $('n_insens').addEventListener('change',calcNa);
+  $('n_inf_add').addEventListener('click',()=>{ nLineTemplate(0); calcNa(); });
+  $('n_use_katz').addEventListener('click',()=>{ if(nCorrK!==null){ $('n_na').value=String(Math.round(nCorrK*10)/10); calcNa(); } });
+  $('n_use_hillier').addEventListener('click',()=>{ if(nCorrH!==null){ $('n_na').value=String(Math.round(nCorrH*10)/10); calcNa(); } });
+  function resetNa(){
+    nLinesBox.innerHTML='';
+    ['n_na','n_target','n_wt','n_age','n_glu','n_drink_vol','n_drink_hr','n_ur_vol','n_ur_hr','n_ur_na','n_ur_k','n_insens_val','n_ol_vol','n_ol_hr','n_ol_na','n_ol_k'].forEach(id=>$(id).value='');
+    $('n_T').value='24'; $('n_insens').checked=true;
+    nSex='male'; document.querySelectorAll('#n_sex button').forEach(x=>x.setAttribute('aria-pressed', x.dataset.v==='male'?'true':'false'));
+    nLineTemplate(0); calcNa();
+  }
+  $('n_clear').addEventListener('click',resetNa);
+  nLineTemplate(0); calcNa();
 
   // ===== INSULIN Rx =====
   const today=new Date(); today.setHours(0,0,0,0);
