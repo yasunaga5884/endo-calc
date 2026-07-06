@@ -156,11 +156,12 @@
   <!-- eGFR / CCr -->
   <section class="panel" id="renal" role="tabpanel">
     <h2>eGFR / クレアチニンクリアランス</h2>
-    <p class="note">eGFR:194×Cr⁻¹·⁰⁹⁴×年齢⁻⁰·²⁸⁷(女性×0.739)。CCr:Cockcroft-Gault(体重が必要)。</p>
+    <p class="note">eGFR:194×Cr⁻¹·⁰⁹⁴×年齢⁻⁰·²⁸⁷(女性×0.739)。CCr:Cockcroft-Gault(体重が必要)。糖尿病性腎症病期はeGFRと尿アルブミンで判定。</p>
     <div class="grid">
       <div class="field"><label>血清クレアチニン</label><div class="inp"><input id="e_cr" inputmode="decimal" placeholder="例 0.85"><span class="unit">mg/dL</span></div></div>
       <div class="field"><label>年齢</label><div class="inp"><input id="e_age" inputmode="decimal" placeholder="例 62"><span class="unit">歳</span></div></div>
       <div class="field"><label>体重 <span class="u">CCr用</span></label><div class="inp"><input id="e_wt" inputmode="decimal" placeholder="例 58"><span class="unit">kg</span></div></div>
+      <div class="field"><label>尿アルブミン <span class="u">腎症病期用</span></label><div class="inp"><input id="e_alb" inputmode="decimal" placeholder="例 45"><span class="unit">mg/gCr</span></div></div>
       <div class="field full"><label>性別</label><div class="seg" id="e_sex"><button data-v="male" aria-pressed="true">男性</button><button data-v="female" aria-pressed="false">女性</button></div></div>
     </div>
     <div class="readout">
@@ -171,6 +172,10 @@
       <div class="ro-row"><span class="ro-label">CCr(Cockcroft-Gault)</span></div>
       <div class="ro-second" style="margin-top:8px"><span class="v" id="e_ccr">—</span><span class="ro-unit">mL/min</span></div>
       <div class="interp" id="e_interp">体重を入力するとCCrも算出します。薬剤の腎排泄・用量調整はCCrを用いる添付文書が多くあります。</div>
+      <div class="ro-div"></div>
+      <div class="ro-row"><span class="ro-label">糖尿病性腎症病期</span></div>
+      <div class="chip none" id="e_neph_chip" style="margin-top:8px"><span class="dot"></span><span id="e_neph_stage">入力待ち</span></div>
+      <div class="interp" id="e_neph_interp">eGFR と尿アルブミン値から病期を判定します(糖尿病性腎症合同委員会 2014年改訂)。</div>
     </div>
     <div class="hint">CCrは実測体重による標準式です。肥満例では過大評価しやすく、酵素法Crでは値が高めに出る傾向があるため、必要に応じて理想体重や補正を検討してください。</div>
   </section>
@@ -314,9 +319,10 @@
     b.setAttribute('aria-pressed','true'); renal();
   }));
   function renal(){
-    const cr=num($('e_cr').value),age=num($('e_age').value),wt=num($('e_wt').value);
+    const cr=num($('e_cr').value),age=num($('e_age').value),wt=num($('e_wt').value),alb=num($('e_alb').value);
+    let g=null;
     if(cr&&age&&cr>0&&age>0){
-      let g=194*Math.pow(cr,-1.094)*Math.pow(age,-0.287); if(eSex==='female') g*=0.739;
+      g=194*Math.pow(cr,-1.094)*Math.pow(age,-0.287); if(eSex==='female') g*=0.739;
       $('e_out').textContent=fmt(g,1);
       let cls,stage,txt;
       if(g>=90){cls='ok';stage='G1 正常または高値';txt='腎機能は保たれています(蛋白尿等で総合評価)。';}
@@ -329,8 +335,36 @@
     } else { $('e_out').textContent="—"; setChip($('e_chip'),'none','入力待ち'); }
     if(cr&&age&&wt&&cr>0){ let ccr=(140-age)*wt/(72*cr); if(eSex==='female') ccr*=0.85; $('e_ccr').textContent=fmt(ccr,1); }
     else { $('e_ccr').textContent="—"; }
+    nephropathy(g,alb);
   }
-  ['e_cr','e_age','e_wt'].forEach(id=>$(id).addEventListener('input',renal));
+  // 糖尿病性腎症病期分類(糖尿病性腎症合同委員会 2014年改訂)
+  function nephropathy(g,alb){
+    let cls,stage,txt;
+    if(g===null){
+      setChip($('e_neph_chip'),'none','入力待ち');
+      $('e_neph_interp').textContent='eGFR と尿アルブミン値から病期を判定します(糖尿病性腎症合同委員会 2014年改訂)。';
+      return;
+    }
+    if(g<30){
+      cls='alert';stage='第4期(腎不全期)';
+      txt='eGFR 30未満は尿アルブミン値にかかわらず腎不全期です。糖尿病性腎症以外の腎疾患との鑑別も要します。透析療法中は第5期(透析療法期)。';
+    } else if(alb===null){
+      setChip($('e_neph_chip'),'none','尿アルブミン待ち');
+      $('e_neph_interp').textContent='eGFR 30以上です。尿アルブミン値(mg/gCr)を入力すると第1〜3期を判定します。';
+      return;
+    } else if(alb<30){
+      cls='ok';stage='第1期(腎症前期)';
+      txt='正常アルブミン尿。血糖・血圧・脂質管理を継続し、定期的な尿アルブミン測定を。';
+    } else if(alb<300){
+      cls='warn';stage='第2期(早期腎症期)';
+      txt='微量アルブミン尿。厳格な血糖・血圧管理とRAS系阻害薬などの腎保護を検討する時期です。';
+    } else {
+      cls='alert';stage='第3期(顕性腎症期)';
+      txt='顕性アルブミン尿(尿蛋白≧0.5 g/gCrでも該当)。腎保護療法の強化と腎臓専門医との連携を検討します。';
+    }
+    setChip($('e_neph_chip'),cls,stage); $('e_neph_interp').textContent=txt;
+  }
+  ['e_cr','e_age','e_wt','e_alb'].forEach(id=>$(id).addEventListener('input',renal));
 
   // OGTT
   function ogtt(){
