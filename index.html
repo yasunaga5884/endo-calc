@@ -134,6 +134,7 @@
     <button class="tab" role="tab" aria-selected="true"  data-tab="carb">カーボカウント</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="renal">eGFR/CCr</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="na">Na補正</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="abx">抗菌薬用量</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ogtt">75g OGTT</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="homa">HOMA</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="conv">GA・換算</button>
@@ -279,6 +280,23 @@
       <div class="interp" id="n_interp">現在Na・体重を入力し、輸液や尿などを加えると予測します。</div>
     </div>
     <div class="hint">補正速度の上限は概ね 低Na血症で8〜10 mEq/L/日未満、高Na血症で10〜12 mEq/L/日未満(浸透圧性脱髄症候群・脳浮腫の回避)。予測は「速度一定」の近似であり、電解質・体液・尿量は経時的に再評価してください。安全上限速度は最初の輸液行を主輸液とみなし、他の入出量を固定して24h上昇/低下を安全域内に収める上限です。輸液のNa/K濃度は各製剤の添付文書でご確認ください。</div>
+  </section>
+
+  <!-- ANTIBIOTIC RENAL DOSING -->
+  <section class="panel" id="abx" role="tabpanel">
+    <h2>抗菌薬 腎機能別投与量</h2>
+    <p class="note">CrClから主要抗菌薬(成人・静注)の推奨用量・間隔の目安を表示します。腎排泄性抗菌薬の維持投与量の目安であり、初回負荷は別途検討します。</p>
+    <div class="grid">
+      <div class="field"><label>クレアチニンクリアランス CrCl</label><div class="inp"><input id="ax_crcl" inputmode="decimal" placeholder="例 45"><span class="unit">mL/min</span></div></div>
+      <div class="field" style="justify-content:flex-end"><button type="button" class="clearbtn" id="ax_pull" style="width:100%">eGFR/CCrタブのCCr値を使う</button></div>
+    </div>
+    <div class="hint" id="ax_severe" style="border-left-color:var(--alert);background:#FCF3F4;color:var(--alert)"><b>重症感染症・敗血症は腎機能によらず初回から最大量・最短間隔で開始</b>してください。以下は維持投与量の目安であり、起炎菌・感染部位・病態・TDMを踏まえ最終判断すること。</div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label" id="ax_bandlbl">CrClを入力してください</span></div>
+      <div class="breakdown" id="ax_list" style="margin-top:12px"></div>
+      <div class="interp" id="ax_interp">CrClを入力すると、各薬剤の該当区分の用量を表示します。TDM薬(VCM/GM)は数値を出さず薬剤部・感染症科に相談してください。</div>
+    </div>
+    <div class="hint">出典: 埼玉協同病院AST「抗菌薬腎機能別投与法一覧(成人)2025年4月改訂版」(サンフォード感染症治療ガイド・JAID/JSC感染症治療ガイド・日本腎臓病薬物療法学会2021・透析患者への投薬ガイドブック第3版・UpToDate等を統合)。CPFXはシプロフロキサシン点滴静注 添付文書、アシクロビルはサンフォード2021(理想体重換算)。<b>本表は目安であり、最新の添付文書・ガイドラインと利用者の判断・責任でご使用ください。</b> HD=血液透析。</div>
   </section>
 
   <!-- OGTT -->
@@ -698,6 +716,84 @@
   }
   sSel.addEventListener('change',steroidCalc);
   $('s_dose').addEventListener('input',steroidCalc);
+
+  // ===== ANTIBIOTIC RENAL DOSING =====
+  // 出典: 埼玉協同病院AST 2025年4月改訂版(サンフォード/JAID・JSC/日本腎臓病薬物療法学会2021 等)。
+  // CPFX=シプロフロキサシン点滴静注 添付文書、ACV=サンフォード2021(理想体重換算)。
+  // bands: [下限しきい値, 1回量, 間隔] を降順。band0のみ「>しきい値」、以降は「>=しきい値」で判定。
+  const ABX=[
+    {n:'セファゾリン (CEZ)', bands:[[50,'2 g','8時間毎'],[10,'2 g','12時間毎'],[0,'2 g','24〜48時間毎']], hd:'1 g 24時間毎(透析後) / 2 g 週3回', note:''},
+    {n:'セフメタゾール (CMZ)', bands:[[50,'2 g','8〜12時間毎'],[10,'2 g','12時間毎'],[0,'2 g','24時間毎']], hd:'1〜2 g 週3回(透析後)', note:'ESBL産生菌の選択肢'},
+    {n:'セフトリアキソン (CTRX)', noAdjust:true, dose:'1〜2 g', interval:'12〜24時間毎', note:'腎機能による減量不要'},
+    {n:'セフタジジム (CAZ)', bands:[[50,'2 g','8〜12時間毎'],[10,'2 g','12〜24時間毎'],[0,'2 g','24〜48時間毎']], hd:'2 g 週3回(透析後)', note:'抗緑膿菌'},
+    {n:'セフェピム (CFPM)', bands:[[50,'2 g','8〜12時間毎'],[10,'2 g','12〜24時間毎'],[0,'1 g','24時間毎']], hd:'1〜2 g 週3回(透析後)', note:'セフェピム脳症に注意(特に腎障害時)'},
+    {n:'タゾバクタム/ピペラシリン (TAZ/PIPC)', bands:[[50,'4.5 g','6〜8時間毎'],[10,'4.5 g','8時間毎'],[0,'4.5 g','12時間毎']], hd:'4.5 g 12時間毎(透析後)', note:''},
+    {n:'ピペラシリン (PIPC)', bands:[[50,'2〜4 g','6〜8時間毎'],[10,'2〜4 g','8〜12時間毎'],[0,'2 g','12〜24時間毎']], hd:'2 g 12〜24時間毎(透析後)', note:''},
+    {n:'メロペネム (MEPM)', bands:[[50,'1 g','8時間毎'],[10,'0.5〜1 g','12時間毎'],[0,'0.5 g','24時間毎']], hd:'0.5 g 24時間毎(透析後)', note:'細菌性髄膜炎は増量(2 g 8時間毎)'},
+    {n:'レボフロキサシン (LVFX)', bands:[[50,'500 mg','24時間毎'],[20,'初日500→翌日以降250 mg','24時間毎'],[0,'初日500→3日目以降250 mg','48時間毎']], hd:'初日500→3日目以降250 mg 48時間毎', note:''},
+    {n:'ST合剤 (一般感染症)', bands:[[50,'2 錠','12時間毎'],[10,'1〜2 錠','12時間毎'],[0,'2 錠','24時間毎']], hd:'2 錠 24時間毎(透析後)', note:'ニューモシスチス肺炎(PCP)治療は体重換算で別基準'},
+    {n:'シプロフロキサシン (CPFX)', bands:[[60,'300 mg','12時間毎'],[30,'200 mg','12時間毎'],[0,'200 mg','24時間毎']], hd:'200 mg 24時間毎', note:'添付文書。病状により1回300 mgも可'},
+    {n:'アシクロビル (ACV)', bands:[[50,'5〜10 mg/kg','8時間毎'],[10,'5〜10 mg/kg','12〜24時間毎'],[0,'5 mg/kg','24時間毎']], hd:'5 mg/kg 24時間毎(透析後)', note:'理想体重で換算。HSV 5・VZV/脳炎 10 mg/kg。脳症・結晶性腎症に注意(十分な補液)'},
+    {n:'バンコマイシン (VCM)', tdm:true, note:'TDM必須。薬剤部・感染症科に相談'},
+    {n:'ゲンタマイシン (GM)', tdm:true, note:'TDM必須。薬剤部・感染症科に相談'},
+  ];
+  function abxPickBand(crcl,bands){
+    if(crcl>bands[0][0]) return 0;
+    for(let i=1;i<bands.length;i++){ if(crcl>=bands[i][0]) return i; }
+    return bands.length-1;
+  }
+  function abxBandLabel(bands,i){
+    if(i===0) return 'CrCl >'+bands[0][0];
+    if(i===bands.length-1) return 'CrCl <'+bands[i-1][0];
+    return 'CrCl '+bands[i][0]+'〜'+bands[i-1][0];
+  }
+  function abxCalc(){
+    const crcl=num($('ax_crcl').value);
+    const list=$('ax_list'); list.innerHTML='';
+    if(crcl===null||crcl<0){
+      $('ax_bandlbl').textContent='CrClを入力してください';
+      $('ax_interp').textContent='CrClを入力すると、各薬剤の該当区分の用量を表示します。TDM薬(VCM/GM)は数値を出さず薬剤部・感染症科に相談してください。';
+      return;
+    }
+    $('ax_bandlbl').textContent='CrCl '+fmt(crcl,0)+' mL/min の目安';
+    ABX.forEach(drug=>{
+      const row=document.createElement('div'); row.className='supply';
+      const nameEl=document.createElement('div'); nameEl.className='sname';
+      const valEl=document.createElement('div'); valEl.className='sval';
+      const big=document.createElement('span'); big.className='big';
+      const sub=document.createElement('span'); sub.className='ssub';
+      let bandNote='';
+      if(drug.tdm){
+        big.innerHTML='<b></b>'; big.querySelector('b').textContent='TDM必須';
+      } else if(drug.noAdjust){
+        big.innerHTML='<b></b><span class="un"></span>';
+        big.querySelector('b').textContent=drug.dose;
+        big.querySelector('.un').textContent=drug.interval;
+        bandNote='減量不要';
+      } else {
+        const i=abxPickBand(crcl,drug.bands), b=drug.bands[i];
+        big.innerHTML='<b></b><span class="un"></span>';
+        big.querySelector('b').textContent=b[1];
+        big.querySelector('.un').textContent=b[2];
+        bandNote=abxBandLabel(drug.bands,i);
+        if(crcl<15&&drug.hd) sub.textContent='透析(HD): '+drug.hd;
+      }
+      const nameMain=document.createElement('span'); nameMain.textContent=drug.n;
+      nameEl.appendChild(nameMain);
+      const noteParts=[bandNote,drug.note].filter(Boolean);
+      if(noteParts.length){ const s=document.createElement('span'); s.textContent=noteParts.join(' ・ '); nameEl.appendChild(s); }
+      valEl.appendChild(big); if(sub.textContent) valEl.appendChild(sub);
+      row.appendChild(nameEl); row.appendChild(valEl); list.appendChild(row);
+    });
+    $('ax_interp').textContent='各薬剤は成人・静注、該当CrCl区分の維持投与量の目安です。CrCl 15未満では透析(HD)時の用量も併記。TDM薬(VCM/GM)は薬剤部・感染症科に相談してください。';
+  }
+  $('ax_crcl').addEventListener('input',abxCalc);
+  $('ax_pull').addEventListener('click',()=>{
+    const v=num($('e_ccr').textContent);
+    if(v!==null){ $('ax_crcl').value=String(Math.round(v*10)/10); abxCalc(); }
+    else { $('ax_bandlbl').textContent='eGFR/CCrタブでCr・年齢・体重・性別を入力してCCrを算出してください'; }
+  });
+  abxCalc();
 
   // ===== BMI / NUTRITION =====
   // BMI分類=日本肥満学会。エネルギー係数(kcal/kg目標体重)=日本糖尿病学会2019:
