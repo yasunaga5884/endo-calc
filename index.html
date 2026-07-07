@@ -136,6 +136,8 @@
     <button class="tab" role="tab" aria-selected="false" data-tab="na">Na補正</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ogtt">75g OGTT</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="homa">HOMA</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="conv">GA・換算</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="steroid">ステロイド</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="bmi">BMI・栄養</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ins">インスリン処方</button>
   </nav>
@@ -312,6 +314,44 @@
       <div class="interp" id="h_interp">HOMA-IR 1.6以下:正常 / 2.5以上:インスリン抵抗性あり。</div>
     </div>
     <div class="hint">HOMA-β = 360×IRI ÷(FPG−63)。基準値は概ね40–60%。空腹時血糖が63以下では算出できません。</div>
+  </section>
+
+  <!-- CONVERSIONS (GA / ketone) -->
+  <section class="panel" id="conv" role="tabpanel">
+    <h2>グリコアルブミン・換算</h2>
+    <p class="note">GAとHbA1c(NGSP)の相互換算。実用式 HbA1c(NGSP) ≒ GA ÷ 3(通常比は約3、病態で2〜3に変動)。GAは過去約2週間の平均血糖を反映します。</p>
+    <div class="grid">
+      <div class="field"><label>グリコアルブミン GA</label><div class="inp"><input id="v_ga" inputmode="decimal" placeholder="例 18"><span class="unit">%</span></div></div>
+      <div class="field"><label>HbA1c(NGSP)</label><div class="inp"><input id="v_a1c" inputmode="decimal" placeholder="例 6.5"><span class="unit">%</span></div></div>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">GA → 推定HbA1c(NGSP)</span></div>
+      <div class="ro-second" style="margin-top:8px"><span class="v" id="v_ga2a1c">—</span><span class="ro-unit">%</span></div>
+      <div class="ro-div"></div>
+      <div class="ro-row"><span class="ro-label">HbA1c → 推定GA</span></div>
+      <div class="ro-second" style="margin-top:8px"><span class="v" id="v_a1c2ga">—</span><span class="ro-unit">%</span></div>
+      <div class="interp" id="v_interp">GA または HbA1c を入力すると相互換算します。</div>
+    </div>
+    <div class="hint">GA基準値は概ね11〜16%。GA/HbA1c比は病態で変動し、貧血・肝硬変・甲状腺機能亢進・ステロイド投与では比が上昇、ネフローゼ・甲状腺機能低下・肥満では低下する傾向があります。血糖の急な変化時はGAが先に動きます。正確な換算にはDeming回帰が必要で、本式は簡易近似です(出典:日本の臨床データ・GA÷3)。</div>
+  </section>
+
+  <!-- STEROID EQUIVALENCE -->
+  <section class="panel" id="steroid" role="tabpanel">
+    <h2>ステロイド力価換算</h2>
+    <p class="note">全身性グルココルチコイドの抗炎症力価に基づく等価用量。プレドニゾロン5mg = ヒドロコルチゾン20mg = デキサメタゾン0.75mg 等。</p>
+    <div class="grid">
+      <div class="field"><label>元の薬剤</label><div class="inp"><select id="s_drug"></select></div></div>
+      <div class="field"><label>用量</label><div class="inp"><input id="s_dose" inputmode="decimal" placeholder="例 30"><span class="unit">mg/日</span></div></div>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">プレドニゾロン(PSL)当量</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="s_psl">—</span><span class="ro-unit">mg/日</span></div>
+      <div class="ro-div"></div>
+      <div class="ro-label" style="margin-bottom:6px">各製剤の等価用量</div>
+      <div class="breakdown" id="s_table"></div>
+      <div class="interp" id="s_interp">薬剤と用量を入力すると各製剤の等価用量を表示します。</div>
+    </div>
+    <div class="hint">本換算は<b>抗炎症(グルココルチコイド)力価</b>に基づく目安です。鉱質コルチコイド作用・生物学的半減期は製剤ごとに異なり、副腎不全の補充・ストレス用量や、長期投与からの減量・中止はこの換算のみで判断せず個別に検討してください。ステロイド糖尿病では食後高血糖が主体となりやすく、血糖モニタリングを併せて行います。(等価用量の出典:標準的な薬理学的等価表)</div>
   </section>
 
   <!-- BMI / NUTRITION -->
@@ -610,6 +650,54 @@
     $('h_interp').textContent='HOMA-IR '+fmt(ir,2)+':'+txt+'。'+extra;
   }
   ['h_fpg','h_iri'].forEach(id=>$(id).addEventListener('input',homa));
+
+  // ===== CONVERSIONS: GA <-> HbA1c =====
+  // 実用式 HbA1c(NGSP) ≒ GA/3 (日本の臨床データ)。GAは約2週間の平均血糖を反映。
+  function convCalc(){
+    const ga=num($('v_ga').value), a1c=num($('v_a1c').value);
+    $('v_ga2a1c').textContent = (ga!==null&&ga>0)?fmt(ga/3,1):'—';
+    $('v_a1c2ga').textContent = (a1c!==null&&a1c>0)?fmt(a1c*3,1):'—';
+    let msg='GA または HbA1c を入力すると相互換算します。';
+    if((ga!==null&&ga>0)||(a1c!==null&&a1c>0)) msg='比は通常約3。急な血糖変動時や病態(貧血・肝硬変・甲状腺・ネフローゼ等)では乖離するため参考値として解釈してください。';
+    $('v_interp').textContent=msg;
+  }
+  ['v_ga','v_a1c'].forEach(id=>$(id).addEventListener('input',convCalc));
+
+  // ===== STEROID EQUIVALENCE =====
+  // 抗炎症(グルココルチコイド)等価用量(mg)。値=プレドニゾロン5mgに対する等価mg。
+  const STEROIDS=[
+    {name:'ヒドロコルチゾン(コルチゾール)', eq:20},
+    {name:'コルチゾン酢酸エステル',        eq:25},
+    {name:'プレドニゾロン(PSL)',           eq:5},
+    {name:'プレドニゾン',                  eq:5},
+    {name:'メチルプレドニゾロン',          eq:4},
+    {name:'トリアムシノロン',              eq:4},
+    {name:'デキサメタゾン',                eq:0.75},
+    {name:'ベタメタゾン',                  eq:0.6},
+  ];
+  const sSel=$('s_drug');
+  STEROIDS.forEach((s,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=s.name; if(s.name.indexOf('プレドニゾロン(PSL)')===0)o.selected=true; sSel.appendChild(o); });
+  function steroidCalc(){
+    const src=STEROIDS[Number(sSel.value)], dose=num($('s_dose').value);
+    const tbl=$('s_table'); tbl.innerHTML='';
+    if(dose===null||dose<0){
+      $('s_psl').textContent='—';
+      $('s_interp').textContent='薬剤と用量を入力すると各製剤の等価用量を表示します。';
+      return;
+    }
+    const psl=dose*(5/src.eq);
+    $('s_psl').textContent=fmt(psl,1);
+    STEROIDS.forEach(s=>{
+      const eqDose=dose*(s.eq/src.eq);
+      const d=document.createElement('div'); d.className='bd'; d.innerHTML='<span></span><b></b>';
+      d.querySelector('span').textContent=s.name+(s===src?'(入力)':'');
+      d.querySelector('b').textContent=fmt(eqDose,s.eq<1?2:1)+' mg';
+      tbl.appendChild(d);
+    });
+    $('s_interp').textContent='抗炎症力価に基づく等価用量です。鉱質コルチコイド作用・半減期は製剤差があり、補充療法・減量計画は個別判断を。';
+  }
+  sSel.addEventListener('change',steroidCalc);
+  $('s_dose').addEventListener('input',steroidCalc);
 
   // ===== BMI / NUTRITION =====
   // BMI分類=日本肥満学会。エネルギー係数(kcal/kg目標体重)=日本糖尿病学会2019:
