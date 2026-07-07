@@ -137,6 +137,7 @@
     <button class="tab" role="tab" aria-selected="false" data-tab="abx">抗菌薬用量</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ogtt">75g OGTT</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="homa">HOMA</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="load">負荷試験</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="conv">GA・換算</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="steroid">ステロイド</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="bmi">BMI・栄養</button>
@@ -332,6 +333,23 @@
       <div class="interp" id="h_interp">HOMA-IR 1.6以下:正常 / 2.5以上:インスリン抵抗性あり。</div>
     </div>
     <div class="hint">HOMA-β = 360×IRI ÷(FPG−63)。基準値は概ね40–60%。空腹時血糖が63以下では算出できません。</div>
+  </section>
+
+  <!-- ENDOCRINE LOADING TESTS -->
+  <section class="panel" id="load" role="tabpanel">
+    <h2>内分泌負荷試験 判定</h2>
+    <p class="note">試験を選び結果を入力すると判定の目安を表示します。カットオフは測定法・ガイドライン依存(アルドステロンはCLEIA法)。最新の基準・臨床像・複数検査で最終判断してください。</p>
+    <div class="grid">
+      <div class="field full"><label>試験を選択</label><div class="inp"><select id="lt_sel"></select></div></div>
+    </div>
+    <div id="lt_fields" class="grid"></div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label" id="lt_testname">—</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="lt_main">—</span></div>
+      <div class="chip none" id="lt_chip"><span class="dot"></span><span id="lt_j">入力待ち</span></div>
+      <div class="interp" id="lt_detail"></div>
+    </div>
+    <div class="hint" id="lt_src"></div>
   </section>
 
   <!-- CONVERSIONS (GA / ketone) -->
@@ -716,6 +734,81 @@
   }
   sSel.addEventListener('change',steroidCalc);
   $('s_dose').addEventListener('input',steroidCalc);
+
+  // ===== ENDOCRINE LOADING TESTS =====
+  // カットオフ出典: PA=原発性アルドステロン症診療ガイドライン2021(CLEIA法, 利用者確認済み)、
+  // 副腎不全=ACTH分泌低下症/副腎皮質機能低下症の診断の手引き(日本内科学会)、
+  // クッシング=クッシング症候群診断基準・Endocrine Society、GH=先端巨大症/成人GHD診療ガイドライン。
+  const LT_TESTS=[
+    {id:'arr', cat:'PA(原発性アルドステロン症)', name:'ARR スクリーニング',
+     inputs:[{id:'pac',label:'PAC(血漿アルドステロン)',unit:'pg/mL',ph:'例 150'},{id:'pra',label:'PRA(血漿レニン活性)',unit:'ng/mL/hr',ph:'例 0.5'}],
+     src:'PA診療ガイドライン2021(CLEIA法)。ARR=PAC÷PRA。ARR>200 かつ PAC≥60 pg/mL で陽性(要機能確認検査)。降圧薬・体位・採血条件の影響に注意。',
+     judge:v=>{ if(v.pac==null||v.pra==null) return null; if(v.pra<=0) return {main:'—',cls:'warn',label:'PRA>0が必要',detail:'PRAが0以下では算出できません。'}; const arr=v.pac/v.pra; const pos=arr>200&&v.pac>=60; return {main:'ARR '+fmt(arr,0),cls:pos?'alert':'ok',label:pos?'陽性(要確認検査)':'陰性',detail:'ARR '+fmt(arr,0)+'（>200 かつ PAC≥60 pg/mL で陽性）。'+(v.pac<60?'PAC<60のため基準未満。':'')+(v.pra<1?' PRA<1でレニン低値。':'')}; } },
+    {id:'cct', cat:'PA(原発性アルドステロン症)', name:'カプトプリル負荷試験',
+     inputs:[{id:'pac',label:'負荷後PAC(60/90分)',unit:'pg/mL',ph:'例 200'},{id:'pra',label:'負荷後PRA',unit:'ng/mL/hr',ph:'例 0.5'}],
+     src:'PA診療ガイドライン2021。カプトプリル50mg内服、60・90分後に採血。負荷後 ARR>200 で陽性。',
+     judge:v=>{ if(v.pac==null||v.pra==null) return null; if(v.pra<=0) return {main:'—',cls:'warn',label:'PRA>0が必要',detail:'PRAが0以下では算出できません。'}; const arr=v.pac/v.pra; const pos=arr>200; return {main:'ARR '+fmt(arr,0),cls:pos?'alert':'ok',label:pos?'陽性':'陰性',detail:'負荷後ARR '+fmt(arr,0)+'（>200で陽性）。臨床像と併せて判断。'}; } },
+    {id:'saline', cat:'PA(原発性アルドステロン症)', name:'生理食塩水負荷試験',
+     inputs:[{id:'pac',label:'負荷後PAC',unit:'pg/mL',ph:'例 120'}],
+     src:'PA診療ガイドライン2021(CLEIA法)。生理食塩水2L/4時間点滴後のPAC。PAC≥100 pg/mL で陽性(アルドステロンが抑制されず)。',
+     judge:v=>{ if(v.pac==null) return null; const pos=v.pac>=100; return {main:fmt(v.pac,0)+' pg/mL',cls:pos?'alert':(v.pac>=60?'warn':'ok'),label:pos?'陽性':(v.pac>=60?'境界(60–100)':'陰性'),detail:'負荷後PAC≥100で陽性。60–100はグレーゾーンとして他検査・臨床像で判断。'}; } },
+    {id:'furo', cat:'PA(原発性アルドステロン症)', name:'フロセミド立位負荷試験',
+     inputs:[{id:'pra',label:'負荷後PRA',unit:'ng/mL/hr',ph:'例 0.8'}],
+     src:'PA診療ガイドライン2021。フロセミド40mg静注＋2時間立位後のPRA。PRA<1.0 ng/mL/hr で低レニン(PA示唆)。',
+     judge:v=>{ if(v.pra==null) return null; const low=v.pra<1.0; return {main:fmt(v.pra,1)+' ng/mL/hr',cls:low?'alert':'ok',label:low?'低レニン(PA示唆)':'反応あり(PA否定的)',detail:'PRA<1.0で低レニン＝PAを示唆。単独では確定せず他の確認検査と併せて。'}; } },
+    {id:'acth', cat:'副腎不全', name:'迅速ACTH負荷試験(250µg)',
+     inputs:[{id:'base',label:'基礎コルチゾール',unit:'µg/dL',ph:'任意 例 8'},{id:'peak',label:'頂値(30/60分)',unit:'µg/dL',ph:'例 22'}],
+     src:'コートロシン250µg静注、30・60分後コルチゾール。頂値≥18で副腎不全否定的、<18で否定できず、<15で原発性副腎不全の可能性。基礎<4は副腎不全示唆。(日本内科学会 診断の手引き)',
+     judge:v=>{ if(v.peak==null) return null; let cls,label; if(v.peak>=18){cls='ok';label='副腎不全 否定的(頂値≥18)';} else if(v.peak>=15){cls='warn';label='否定できない(15–18)';} else {cls='alert';label='原発性副腎不全の可能性(<15)';} let d='頂値 '+fmt(v.peak,1)+' µg/dL。'; if(v.base!=null){ d+=' 基礎 '+fmt(v.base,1)+(v.base<4?'（<4:副腎不全示唆）':(v.base>18?'（>18:副腎不全は否定的）':''))+'。'; } return {main:fmt(v.peak,1)+' µg/dL',cls,label,detail:d}; } },
+    {id:'dst1', cat:'クッシング症候群', name:'1mgデキサメタゾン抑制試験',
+     inputs:[{id:'cort',label:'翌朝コルチゾール',unit:'µg/dL',ph:'例 2.5'}],
+     src:'前夜23時にデキサメタゾン1mg内服、翌朝8時コルチゾール。<1.8で正常抑制、≥1.8で抑制不十分(要精査)、≥5で顕性を示唆。(Endocrine Society／日本の従来基準)',
+     judge:v=>{ if(v.cort==null) return null; let cls,label; if(v.cort<1.8){cls='ok';label='正常抑制(<1.8)';} else if(v.cort<5){cls='warn';label='抑制不十分(1.8–5)要精査';} else {cls='alert';label='陽性(≥5)顕性を示唆';} return {main:fmt(v.cort,1)+' µg/dL',cls,label,detail:'翌朝コルチゾール '+fmt(v.cort,1)+'。偽陽性(薬剤・エストロゲン・代謝)に注意し複数検査で。'}; } },
+    {id:'dst05', cat:'クッシング症候群', name:'0.5mgデキサメタゾン抑制試験',
+     inputs:[{id:'cort',label:'翌朝コルチゾール',unit:'µg/dL',ph:'例 1.5'}],
+     src:'日本のスクリーニング(0.5mg法)。前夜デキサメタゾン0.5mg内服、翌朝コルチゾール<1.8で正常、≥1.8で陽性(スクリーニング)。',
+     judge:v=>{ if(v.cort==null) return null; const pos=v.cort>=1.8; return {main:fmt(v.cort,1)+' µg/dL',cls:pos?'alert':'ok',label:pos?'陽性(≥1.8)':'正常抑制(<1.8)',detail:'0.5mg法で≥1.8は陽性。陽性なら1mg法・深夜コルチゾール・UFC等で精査。'}; } },
+    {id:'midnight', cat:'クッシング症候群', name:'深夜血中コルチゾール',
+     inputs:[{id:'cort',label:'深夜(入眠時)コルチゾール',unit:'µg/dL',ph:'例 3'}],
+     src:'概日リズム評価。深夜(入眠時)コルチゾール≥5 µg/dLで日内変動の消失＝クッシング症候群を示唆。',
+     judge:v=>{ if(v.cort==null) return null; const pos=v.cort>=5; return {main:fmt(v.cort,1)+' µg/dL',cls:pos?'alert':'ok',label:pos?'異常(≥5:リズム消失)':'正常範囲(<5)',detail:'安静入眠時採血が前提。ストレス・不眠で偽陽性に注意。'}; } },
+    {id:'ghogtt', cat:'下垂体・GH', name:'75gOGTT GH抑制(先端巨大症)',
+     inputs:[{id:'nadir',label:'GH底値(nadir)',unit:'ng/mL',ph:'例 0.8'}],
+     src:'先端巨大症診療ガイドライン。75g経口ブドウ糖負荷でGH底値<0.4 ng/mLに抑制されれば正常。≥0.4で抑制不良＝先端巨大症を示唆。',
+     judge:v=>{ if(v.nadir==null) return null; const abn=v.nadir>=0.4; return {main:fmt(v.nadir,2)+' ng/mL',cls:abn?'alert':'ok',label:abn?'抑制不良(≥0.4)先端巨大症示唆':'正常抑制(<0.4)',detail:'IGF-1高値と併せて診断。糖尿病・肝疾患等で偽陽性の可能性。'}; } },
+    {id:'ghrp2', cat:'下垂体・GH', name:'GHRP-2負荷(成人GHD)',
+     inputs:[{id:'peak',label:'GH頂値',unit:'ng/mL',ph:'例 5'}],
+     src:'成人成長ホルモン分泌不全症の診断と治療の手引き。GHRP-2負荷でGH頂値<9 ng/mLは重症成人GHD。',
+     judge:v=>{ if(v.peak==null) return null; const ghd=v.peak<9; return {main:fmt(v.peak,1)+' ng/mL',cls:ghd?'alert':'ok',label:ghd?'重症成人GHD(頂値<9)':'否定的(≥9)',detail:'GHRP-2基準の重症GHD判定。他の下垂体前葉機能も併せて評価。'}; } },
+  ];
+  const ltSel=$('lt_sel');
+  let ltCat='';
+  LT_TESTS.forEach((t,i)=>{
+    if(t.cat!==ltCat){ ltCat=t.cat; const og=document.createElement('optgroup'); og.label=t.cat; og.id='ltog_'+i; ltSel.appendChild(og); }
+    const o=document.createElement('option'); o.value=i; o.textContent=t.name;
+    ltSel.querySelector('optgroup:last-child').appendChild(o);
+  });
+  function ltRenderFields(){
+    const t=LT_TESTS[Number(ltSel.value)], box=$('lt_fields'); box.innerHTML='';
+    t.inputs.forEach(f=>{
+      const d=document.createElement('div'); d.className='field';
+      d.innerHTML='<label>'+f.label+'</label><div class="inp"><input id="lt_in_'+f.id+'" inputmode="decimal" placeholder="'+f.ph+'"><span class="unit">'+f.unit+'</span></div>';
+      box.appendChild(d);
+    });
+    box.querySelectorAll('input').forEach(el=>el.addEventListener('input',ltCalc));
+    $('lt_testname').textContent=t.name;
+    $('lt_src').textContent='出典: '+t.src;
+    ltCalc();
+  }
+  function ltCalc(){
+    const t=LT_TESTS[Number(ltSel.value)], v={};
+    t.inputs.forEach(f=>{ const el=$('lt_in_'+f.id); v[f.id]=el?num(el.value):null; });
+    const r=t.judge(v);
+    if(!r){ $('lt_main').textContent='—'; setChip($('lt_chip'),'none','入力待ち'); $('lt_detail').textContent=''; return; }
+    $('lt_main').textContent=r.main; setChip($('lt_chip'),r.cls,r.label); $('lt_detail').textContent=r.detail;
+  }
+  ltSel.addEventListener('change',ltRenderFields);
+  ltRenderFields();
 
   // ===== ANTIBIOTIC RENAL DOSING =====
   // 出典: 埼玉協同病院AST 2025年4月改訂版(サンフォード/JAID・JSC/日本腎臓病薬物療法学会2021 等)。
