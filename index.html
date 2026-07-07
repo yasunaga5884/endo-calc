@@ -159,6 +159,27 @@
       <div class="interp" id="c_interp"></div>
     </div>
     <div class="hint">補正分は現在血糖が目標を上回る場合のみ加算します。低血糖時や運動前などは臨床判断で減量を。</div>
+
+    <div class="nsub">写真から糖質推定(Gemini) <span class="u">この機能のみ画像を外部(Google)へ送信します</span></div>
+    <div class="grid">
+      <div class="field"><label>Gemini APIキー <span class="u">この端末にのみ保存</span></label><div class="inp"><input type="password" id="g_key" placeholder="AIza..." autocomplete="off"></div></div>
+      <div class="field"><label>食事の写真</label><div class="inp"><input type="file" id="g_photo" accept="image/*"></div></div>
+    </div>
+    <button class="addbtn" id="g_run" style="margin-top:12px">写真から糖質・カロリーを推定</button>
+    <div class="psum" id="g_status" style="display:none;margin-top:10px"></div>
+    <div id="g_result" style="display:none">
+      <div class="readout" style="margin-top:12px">
+        <div class="ro-row"><span class="ro-label">推定結果(参考値)</span></div>
+        <div class="breakdown" id="g_foods" style="margin-top:10px"></div>
+        <div class="ro-sub" style="margin-top:12px">
+          <div>合計糖質 <b id="g_carbs">—</b> g</div>
+          <div>合計エネルギー <b id="g_kcal">—</b> kcal</div>
+        </div>
+        <div class="interp" id="g_note"></div>
+      </div>
+      <button class="addbtn" id="g_apply" style="margin-top:10px">↑ 推定糖質量を上の「糖質量」欄へ転記</button>
+    </div>
+    <div class="hint">写真からの推定は誤差±20〜30%程度が見込まれる<b>参考値</b>です。インスリン量の決定は表示値を鵜呑みにせず臨床判断で調整してください。<br>プライバシー: 写真はGoogle(Gemini API)に送信されます。<b>無料枠では送信内容がGoogleの製品改善に利用されることがあります</b>。名札・食札・人物など個人が特定できるものが写り込まないようにしてください。APIキーはこの端末のブラウザにのみ保存されます(共用PCでは使用後に削除を)。キーは <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> で無料発行できます。</div>
   </section>
 
   <!-- eGFR / CCr -->
@@ -431,6 +452,74 @@
     $('c_interp').textContent=msg;
   }
   ['c_tdd','c_carb','c_icr','c_isf','c_bg','c_target'].forEach(id=>$(id).addEventListener('input',carb));
+
+  // ---- 写真から糖質推定(Gemini gemini-3.5-flash) ----
+  // この機能のみ画像を外部(Google)へ送信する。キーは端末のlocalStorageにのみ保存。
+  const GKEY_STORE='gemini_api_key';
+  try{ const k=localStorage.getItem(GKEY_STORE); if(k) $('g_key').value=k; }catch(e){}
+  $('g_key').addEventListener('input',()=>{ try{ localStorage.setItem(GKEY_STORE,$('g_key').value.trim()); }catch(e){} });
+  function gStatus(msg,bad){ const s=$('g_status'); if(!msg){ s.style.display='none'; return; } s.style.display=''; s.className='psum'+(bad?' bad':''); s.textContent=msg; }
+  async function gCompress(file){
+    const img=await new Promise((res,rej)=>{ const u=URL.createObjectURL(file); const i=new Image(); i.onload=()=>{URL.revokeObjectURL(u);res(i);}; i.onerror=rej; i.src=u; });
+    const max=1024, sc=Math.min(1,max/Math.max(img.width,img.height));
+    const cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(img.width*sc)); cv.height=Math.max(1,Math.round(img.height*sc));
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    return cv.toDataURL('image/jpeg',0.85).split(',')[1];
+  }
+  let gLast=null;
+  $('g_run').addEventListener('click',async()=>{
+    const key=$('g_key').value.trim(), f=$('g_photo').files[0];
+    if(!key){ gStatus('Gemini APIキーを入力してください(Google AI Studioで無料発行できます)。',true); return; }
+    if(!f){ gStatus('食事の写真を選択してください。',true); return; }
+    $('g_result').style.display='none';
+    gStatus('推定中…(数秒かかります)');
+    try{
+      const b64=await gCompress(f);
+      const body={
+        contents:[{parts:[
+          {inlineData:{mimeType:'image/jpeg',data:b64}},
+          {text:'この食事の写真に写っている料理・食品を推定し、日本の一般的な食品成分値でそれぞれのおおよその糖質量(g)とエネルギー(kcal)を見積もってください。量が不明確な場合は一般的な1人前と仮定し、その前提をnoteに記載してください。次のJSONのみで回答してください: {"foods":[{"name":"料理名","carbs_g":数値,"kcal":数値}],"total_carbs_g":数値,"total_kcal":数値,"note":"前提や注意"}'}
+        ]}],
+        generationConfig:{responseMimeType:'application/json',temperature:0.2}
+      };
+      const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',{
+        method:'POST', headers:{'Content-Type':'application/json','x-goog-api-key':key}, body:JSON.stringify(body)
+      });
+      if(!res.ok){
+        let msg='HTTP '+res.status;
+        try{ const je=await res.json(); if(je.error&&je.error.message) msg+=': '+je.error.message.slice(0,120); }catch(e){}
+        if(res.status===400||res.status===403) msg+=' — APIキーを確認してください。';
+        if(res.status===429) msg+=' — 無料枠の回数上限の可能性があります。時間をおいて再試行してください。';
+        gStatus('推定に失敗しました('+msg+')',true); return;
+      }
+      const j=await res.json();
+      let txt=(((j.candidates||[])[0]||{}).content||{parts:[]}).parts.map(p=>p.text||'').join('');
+      txt=txt.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```\s*$/,'').trim();
+      const data=JSON.parse(txt);
+      if(!data||!Array.isArray(data.foods)) throw new Error('応答の形式が想定と異なります');
+      gLast=data;
+      const fb=$('g_foods'); fb.innerHTML='';
+      data.foods.forEach(x=>{
+        const d=document.createElement('div'); d.className='bd'; d.innerHTML='<span></span><b></b>';
+        d.querySelector('span').textContent=String(x.name==null?'?':x.name);
+        d.querySelector('b').textContent='糖質 '+fmt(num(x.carbs_g),1)+' g / '+fmt(num(x.kcal),0)+' kcal';
+        fb.appendChild(d);
+      });
+      $('g_carbs').textContent=fmt(num(data.total_carbs_g),1);
+      $('g_kcal').textContent=fmt(num(data.total_kcal),0);
+      $('g_note').textContent=(data.note?String(data.note)+' ':'')+'※AIによる概算(誤差±20〜30%が目安)。臨床判断で調整してください。';
+      $('g_result').style.display='';
+      gStatus('');
+    }catch(e){ gStatus('推定に失敗しました('+(e&&e.message?e.message:'不明なエラー')+')。通信環境と写真を確認してください。',true); }
+  });
+  $('g_apply').addEventListener('click',()=>{
+    const tc=gLast?num(gLast.total_carbs_g):null;
+    if(tc!==null){
+      $('c_carb').value=String(Math.round(tc*10)/10);
+      carb();
+      $('c_carb').scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  });
 
   // eGFR / CCr
   let eSex='male';
