@@ -134,17 +134,15 @@
 
   <nav class="tabs" role="tablist" aria-label="計算ツール">
     <button class="tab" role="tab" aria-selected="true"  data-tab="carb">カーボカウント</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="ins">インスリン処方</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="bmi">BMI・栄養</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="conv">GA・換算</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="renal">eGFR/CCr</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="na">Na補正</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="abx">抗菌薬用量</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="ogtt">75g OGTT</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="homa">HOMA</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="na">Na補正</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="load">負荷試験</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ref">基準値</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="conv">GA・換算</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="steroid">ステロイド</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="bmi">BMI・栄養</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="ins">インスリン処方</button>
   </nav>
 
   <!-- CARB -->
@@ -301,41 +299,6 @@
       <div class="interp" id="ax_interp">CrClを入力すると、各薬剤の該当区分の用量を表示します。TDM薬(VCM/GM)は数値を出さず薬剤部・感染症科に相談してください。</div>
     </div>
     <div class="hint">出典: 埼玉協同病院AST「抗菌薬腎機能別投与法一覧(成人)2025年4月改訂版」(サンフォード感染症治療ガイド・JAID/JSC感染症治療ガイド・日本腎臓病薬物療法学会2021・透析患者への投薬ガイドブック第3版・UpToDate等を統合)。CPFXはシプロフロキサシン点滴静注 添付文書、アシクロビルはサンフォード2021(理想体重換算)。<b>本表は目安であり、最新の添付文書・ガイドラインと利用者の判断・責任でご使用ください。</b> HD=血液透析。</div>
-  </section>
-
-  <!-- OGTT -->
-  <section class="panel" id="ogtt" role="tabpanel">
-    <h2>75g OGTT 判定</h2>
-    <p class="note">日本糖尿病学会の判定区分。空腹時値と2時間値で分類します。</p>
-    <div class="grid">
-      <div class="field"><label>空腹時血糖 FPG</label><div class="inp"><input id="o_fpg" inputmode="decimal" placeholder="例 108"><span class="unit">mg/dL</span></div></div>
-      <div class="field"><label>2時間値</label><div class="inp"><input id="o_2h" inputmode="decimal" placeholder="例 156"><span class="unit">mg/dL</span></div></div>
-    </div>
-    <div class="readout">
-      <div class="ro-row"><span class="ro-label">判定区分</span></div>
-      <div class="chip none" id="o_chip" style="margin-top:10px;font-size:17px;padding:10px 16px"><span class="dot"></span><span id="o_type">入力待ち</span></div>
-      <div class="ro-sub" style="margin-top:14px"><div>FPG基準 <b id="o_fpg_j">—</b></div><div>2時間値基準 <b id="o_2h_j">—</b></div></div>
-      <div class="interp" id="o_interp">糖尿病型:FPG≧126 または 2時間≧200 / 正常型:FPG&lt;110 かつ 2時間&lt;140 / 境界型:いずれにも該当せず。</div>
-    </div>
-    <div class="hint">診断確定には別日再検やHbA1c併用が必要です。空腹時100–109は正常高値としてフォロー対象。</div>
-  </section>
-
-  <!-- HOMA -->
-  <section class="panel" id="homa" role="tabpanel">
-    <h2>HOMA-IR / HOMA-β</h2>
-    <p class="note">空腹時採血から算出。空腹時血糖140mg/dL以下で信頼性が高い指標です。</p>
-    <div class="grid">
-      <div class="field"><label>空腹時血糖 FPG</label><div class="inp"><input id="h_fpg" inputmode="decimal" placeholder="例 98"><span class="unit">mg/dL</span></div></div>
-      <div class="field"><label>空腹時インスリン IRI</label><div class="inp"><input id="h_iri" inputmode="decimal" placeholder="例 8.5"><span class="unit">µU/mL</span></div></div>
-    </div>
-    <div class="readout">
-      <div class="ro-row"><span class="ro-label">HOMA-IR(抵抗性)</span></div>
-      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="h_ir">—</span></div>
-      <div class="chip none" id="h_chip"><span class="dot"></span><span id="h_ir_j">入力待ち</span></div>
-      <div class="ro-sub" style="margin-top:16px"><div>HOMA-β(分泌能) <b id="h_beta">—</b> %</div></div>
-      <div class="interp" id="h_interp">HOMA-IR 1.6以下:正常 / 2.5以上:インスリン抵抗性あり。</div>
-    </div>
-    <div class="hint">HOMA-β = 360×IRI ÷(FPG−63)。基準値は概ね40–60%。空腹時血糖が63以下では算出できません。</div>
   </section>
 
   <!-- ENDOCRINE LOADING TESTS -->
@@ -673,41 +636,6 @@
     setChip($('e_neph_chip'),cls,stage); $('e_neph_interp').textContent=txt;
   }
   ['e_cr','e_age','e_wt','e_alb'].forEach(id=>$(id).addEventListener('input',renal));
-
-  // OGTT
-  function ogtt(){
-    const f=num($('o_fpg').value),h=num($('o_2h').value);
-    $('o_fpg_j').textContent=f===null?"—":(f>=126?'糖尿病域':f<110?'正常域':'境界域');
-    $('o_2h_j').textContent =h===null?"—":(h>=200?'糖尿病域':h<140?'正常域':'境界域');
-    if(f===null&&h===null){ setChip($('o_chip'),'none','入力待ち'); return; }
-    let cls,type;
-    if((f!==null&&f>=126)||(h!==null&&h>=200)){cls='alert';type='糖尿病型';}
-    else if((f===null||f<110)&&(h===null||h<140)){cls='ok';type='正常型';}
-    else {cls='warn';type='境界型';}
-    setChip($('o_chip'),cls,type);
-    let note='';
-    if(type==='正常型'&&f!==null&&f>=100) note=' 空腹時100–109の正常高値。将来的な耐糖能悪化のフォローを。';
-    if(type==='糖尿病型') note=' 別日再検またはHbA1c≧6.5%の併存で糖尿病と診断します。';
-    if(type==='境界型') note=' IFG/IGTに相当。生活指導と定期フォローの対象です。';
-    $('o_interp').textContent='判定:'+type+'。'+note;
-  }
-  ['o_fpg','o_2h'].forEach(id=>$(id).addEventListener('input',ogtt));
-
-  // HOMA
-  function homa(){
-    const f=num($('h_fpg').value),i=num($('h_iri').value);
-    let ir=null,beta=null;
-    if(f!==null&&i!==null&&f>0) ir=i*f/405;
-    if(f!==null&&i!==null&&(f-63)>0) beta=360*i/(f-63);
-    $('h_ir').textContent=ir===null?"—":fmt(ir,2); $('h_beta').textContent=beta===null?"—":fmt(beta,0);
-    if(ir===null){ setChip($('h_chip'),'none','入力待ち'); return; }
-    let cls,txt;
-    if(ir<=1.6){cls='ok';txt='正常範囲';} else if(ir<2.5){cls='warn';txt='境界(1.6〜2.5)';} else {cls='alert';txt='インスリン抵抗性あり';}
-    setChip($('h_chip'),cls,txt);
-    let extra=(f!==null&&f>140)?' 空腹時血糖が140を超えており、HOMA-IRの解釈には注意が必要です。':'';
-    $('h_interp').textContent='HOMA-IR '+fmt(ir,2)+':'+txt+'。'+extra;
-  }
-  ['h_fpg','h_iri'].forEach(id=>$(id).addEventListener('input',homa));
 
   // ===== CONVERSIONS: GA <-> HbA1c =====
   // 実用式 HbA1c(NGSP) ≒ GA/3 (日本の臨床データ)。GAは約2週間の平均血糖を反映。
