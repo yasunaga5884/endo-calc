@@ -118,6 +118,8 @@
   .corrbtns button{border:1px solid var(--accent);background:#fff;color:var(--accent);font-family:var(--sans);font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;cursor:pointer}
   .corrbtns button:hover{background:var(--accent-soft)}
   .n_iline .res .sub{font-family:var(--mono)}
+  .rq{display:inline-block;font-size:10px;font-weight:700;color:var(--warn);background:#FBF0DC;border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+  .rbasis{display:inline-block;font-size:10.5px;color:#7E948C;background:rgba(255,255,255,.06);border-radius:5px;padding:1px 6px;margin-left:6px}
   footer{margin-top:22px;font-size:11.5px;color:var(--muted);line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
   footer b{color:var(--ink)}
 </style>
@@ -138,6 +140,7 @@
     <button class="tab" role="tab" aria-selected="false" data-tab="ogtt">75g OGTT</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="homa">HOMA</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="load">負荷試験</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="ref">基準値</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="conv">GA・換算</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="steroid">ステロイド</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="bmi">BMI・栄養</button>
@@ -350,6 +353,25 @@
       <div class="interp" id="lt_detail"></div>
     </div>
     <div class="hint" id="lt_src"></div>
+  </section>
+
+  <!-- HORMONE REFERENCE RANGES -->
+  <section class="panel" id="ref" role="tabpanel">
+    <h2>下垂体・副腎 基礎ホルモン基準値</h2>
+    <p class="note">性別・月経周期を選ぶと各項目の該当基準値をハイライトします。<b>代表値であり測定法・施設で異なります。自施設の基準値を優先してください。</b>「要確認」は測定法・年齢依存が特に強い項目です。</p>
+    <div class="grid">
+      <div class="field full"><label>性別</label><div class="seg" id="r_sex"><button data-v="male" aria-pressed="true">男性</button><button data-v="female" aria-pressed="false">女性</button></div></div>
+      <div class="field full" id="r_phase_wrap" style="display:none"><label>月経周期・閉経</label><div class="seg" id="r_phase">
+        <button data-v="follicular" aria-pressed="true">卵胞期</button>
+        <button data-v="ovulatory" aria-pressed="false">排卵期</button>
+        <button data-v="luteal" aria-pressed="false">黄体期</button>
+        <button data-v="postmeno" aria-pressed="false">閉経後</button>
+      </div></div>
+    </div>
+    <div class="readout">
+      <div id="r_list"></div>
+    </div>
+    <div class="hint">出典(代表値): 大阪医科薬科大学病院 内分泌検査案内、LSIメディエンス／SRL総合検査案内、原発性アルドステロン症診療ガイドライン2021(CLEIA法)。基準値は測定キット・施設・採血条件(体位・時刻・薬剤)で変動します。診断は必ず自施設の基準値・臨床像・必要に応じ負荷試験と併せて行ってください。</div>
   </section>
 
   <!-- CONVERSIONS (GA / ketone) -->
@@ -734,6 +756,76 @@
   }
   sSel.addEventListener('change',steroidCalc);
   $('s_dose').addEventListener('input',steroidCalc);
+
+  // ===== HORMONE REFERENCE RANGES =====
+  // 代表値(測定法・施設依存)。出典: 大阪医科薬科大学病院 内分泌検査案内、LSIメディエンス/SRL総合検査案内、PA診療GL2021(CLEIA)。
+  // type: single=共通 / sex=男女別 / phase=男性+女性月経周期別 / sexphase=テストステロン(女性は閉経前後)
+  const REF=[
+    {cat:'下垂体前葉・副腎軸', name:'ACTH', unit:'pg/mL', type:'single', v:'7.2–63.3', note:'早朝(7–10時)安静時。日内変動あり'},
+    {cat:'下垂体前葉・副腎軸', name:'コルチゾール', unit:'µg/dL', type:'single', v:'7.1–19.6', note:'早朝(6–10時)。日内変動あり(深夜低下)'},
+    {cat:'下垂体前葉・副腎軸', name:'TSH', unit:'µIU/mL', type:'single', v:'0.35–4.94', note:'FT4と併せて評価'},
+    {cat:'下垂体前葉・副腎軸', name:'プロラクチン(PRL)', unit:'ng/mL', type:'sex', male:'4.29–13.69', female:'4.91–29.32', note:'薬剤・妊娠・ストレスで上昇。マクロPRLに注意'},
+    {cat:'下垂体前葉・副腎軸', name:'成長ホルモン(GH)', unit:'ng/mL', type:'sex', male:'≤2.47', female:'0.13–9.88', note:'負荷前安静時。基礎値の変動が大きく負荷試験で評価', flag:true},
+    {cat:'下垂体前葉・副腎軸', name:'IGF-1(ソマトメジンC)', unit:'ng/mL', type:'single', v:'年齢別基準/SDスコアで評価', note:'年齢・性別依存が強い。施設の年齢別表・SDスコア(±2SD)で判定', flag:true},
+    {cat:'性腺軸', name:'LH', unit:'mIU/mL', type:'phase', male:'0.57–12.07', follicular:'1.80–11.78', ovulatory:'7.59–89.08', luteal:'0.56–14.00', postmeno:'5.16–61.99'},
+    {cat:'性腺軸', name:'FSH', unit:'mIU/mL', type:'phase', male:'2.0–8.3', follicular:'3.03–8.08', ovulatory:'2.55–16.69', luteal:'1.38–5.47', postmeno:'26.72–133.41', note:'男性値は代表値', flag:true},
+    {cat:'性腺軸', name:'エストラジオール(E2)', unit:'pg/mL', type:'phase', male:'≤54', follicular:'19–226', ovulatory:'49–487', luteal:'78–252', postmeno:'<39', note:'男性値は代表値', flag:true},
+    {cat:'性腺軸', name:'テストステロン', unit:'ng/mL', type:'sexphase', male:'1.92–8.84', femalePre:'0.15–0.44', femalePost:'0.12–0.31', note:'女性は閉経前/後で異なる'},
+    {cat:'副腎ステロイド・レニン系', name:'DHEA-S', unit:'µg/dL', type:'single', v:'年齢依存(加齢で低下・男>女)', note:'代表: 成人 男 概ね100–400 / 女 50–300。施設の年齢別基準を参照', flag:true},
+    {cat:'副腎ステロイド・レニン系', name:'アルドステロン PAC(CLEIA)', unit:'pg/mL', type:'single', v:'体位依存(随時/臥位/立位)', note:'CLEIA法・施設基準を参照。PAスクリーニングはARR>200かつPAC≥60(GL2021)', flag:true},
+    {cat:'副腎ステロイド・レニン系', name:'レニン活性(PRA)', unit:'ng/mL/hr', type:'single', v:'0.3–2.9(随時)', note:'体位・塩分・薬剤で変動。臥位で低め'},
+    {cat:'副腎ステロイド・レニン系', name:'17-OHP', unit:'ng/mL', type:'single', v:'成人 概ね ≤2', note:'黄体期・男性でやや高値。21水酸化酵素欠損症の指標', flag:true},
+    {cat:'副腎髄質(血漿カテコラミン)', name:'アドレナリン', unit:'pg/mL', type:'single', v:'≤100', note:'安静臥位30分後採血。体位・ストレスで上昇'},
+    {cat:'副腎髄質(血漿カテコラミン)', name:'ノルアドレナリン', unit:'pg/mL', type:'single', v:'100–450'},
+    {cat:'副腎髄質(血漿カテコラミン)', name:'ドパミン', unit:'pg/mL', type:'single', v:'≤20'},
+    {cat:'副腎髄質(血漿カテコラミン)', name:'尿中メタネフリン', unit:'mg/日', type:'single', v:'0.04–0.19', note:'代表値(蓄尿)。褐色細胞腫の指標', flag:true},
+    {cat:'副腎髄質(血漿カテコラミン)', name:'尿中ノルメタネフリン', unit:'mg/日', type:'single', v:'0.09–0.33', note:'代表値(蓄尿)', flag:true},
+  ];
+  const PHASE_LABEL={follicular:'卵胞期',ovulatory:'排卵期',luteal:'黄体期',postmeno:'閉経後'};
+  let rSex='male', rPhase='follicular';
+  document.querySelectorAll('#r_sex button').forEach(b=>b.addEventListener('click',()=>{
+    rSex=b.dataset.v;
+    document.querySelectorAll('#r_sex button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true');
+    $('r_phase_wrap').style.display=(rSex==='female')?'':'none';
+    refRender();
+  }));
+  document.querySelectorAll('#r_phase button').forEach(b=>b.addEventListener('click',()=>{
+    rPhase=b.dataset.v;
+    document.querySelectorAll('#r_phase button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true'); refRender();
+  }));
+  function refValue(item){
+    if(item.type==='single') return {v:item.v, basis:''};
+    if(item.type==='sex') return {v:(rSex==='male'?item.male:item.female), basis:(rSex==='male'?'男性':'女性')};
+    if(item.type==='phase'){ if(rSex==='male') return {v:item.male, basis:'男性'}; return {v:item[rPhase], basis:'女性・'+PHASE_LABEL[rPhase]}; }
+    if(item.type==='sexphase'){ if(rSex==='male') return {v:item.male, basis:'男性'}; const post=rPhase==='postmeno'; return {v:(post?item.femalePost:item.femalePre), basis:'女性('+(post?'閉経後':'閉経前')+')'}; }
+    return {v:'—', basis:''};
+  }
+  function refRender(){
+    const box=$('r_list'); box.innerHTML='';
+    let cat='';
+    REF.forEach(item=>{
+      if(item.cat!==cat){ cat=item.cat; const h=document.createElement('div'); h.className='nsub'; h.style.color='#7EE0AE'; h.style.borderTopColor='rgba(255,255,255,.09)'; h.textContent=cat; box.appendChild(h); }
+      const r=refValue(item);
+      const row=document.createElement('div'); row.className='supply';
+      const nameEl=document.createElement('div'); nameEl.className='sname';
+      const nm=document.createElement('span'); nm.textContent=item.name;
+      if(item.flag){ const bd=document.createElement('span'); bd.className='rq'; bd.textContent='要確認'; nm.appendChild(bd); }
+      if(r.basis){ const ba=document.createElement('span'); ba.className='rbasis'; ba.textContent=r.basis; nm.appendChild(ba); }
+      nameEl.appendChild(nm);
+      if(item.note){ const nt=document.createElement('span'); nt.textContent=item.note; nameEl.appendChild(nt); }
+      const valEl=document.createElement('div'); valEl.className='sval';
+      const big=document.createElement('span'); big.className='big';
+      const hasNum=/[0-9]/.test(r.v);
+      big.innerHTML='<b></b>'+(hasNum?'<span class="un"></span>':'');
+      big.querySelector('b').textContent=r.v;
+      if(hasNum) big.querySelector('.un').textContent=item.unit;
+      valEl.appendChild(big);
+      row.appendChild(nameEl); row.appendChild(valEl); box.appendChild(row);
+    });
+  }
+  refRender();
 
   // ===== ENDOCRINE LOADING TESTS =====
   // カットオフ出典: PA=原発性アルドステロン症診療ガイドライン2021(CLEIA法, 利用者確認済み)、
