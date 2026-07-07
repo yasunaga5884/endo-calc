@@ -296,15 +296,24 @@
   <!-- BMI / NUTRITION -->
   <section class="panel" id="bmi" role="tabpanel">
     <h2>BMI・栄養指導エネルギー量</h2>
-    <p class="note">BMI分類は日本肥満学会。指示エネルギーは目標体重×エネルギー係数(日本糖尿病学会 2019)。目標体重:65歳未満=22×身長m²、65歳以上=22〜25×身長m²。</p>
+    <p class="note">BMI分類は日本肥満学会。指示エネルギーは目標体重×エネルギー係数(日本糖尿病学会 2019)。目標体重:65歳未満=22×身長m²、65歳以上=22〜25×身長m²。妊娠中(GDM等)は標準体重×30＋時期別付加量(非妊時BMI25以上は付加なし)。</p>
     <div class="grid">
       <div class="field"><label>身長</label><div class="inp"><input id="b_ht" inputmode="decimal" placeholder="例 160"><span class="unit">cm</span></div></div>
       <div class="field"><label>体重</label><div class="inp"><input id="b_wt" inputmode="decimal" placeholder="例 65"><span class="unit">kg</span></div></div>
       <div class="field"><label>年齢 <span class="u">目標体重の係数用・任意</span></label><div class="inp"><input id="b_age" inputmode="decimal" placeholder="例 62"><span class="unit">歳</span></div></div>
-      <div class="field full"><label>身体活動レベル(労作)</label><div class="seg" id="b_act">
+      <div class="field full" id="b_act_wrap"><label>身体活動レベル(労作)</label><div class="seg" id="b_act">
         <button data-v="light" aria-pressed="false">軽い<br><span style="font-weight:500;font-size:11px">座位中心</span></button>
         <button data-v="normal" aria-pressed="true">普通<br><span style="font-weight:500;font-size:11px">通勤・家事等</span></button>
         <button data-v="heavy" aria-pressed="false">重い<br><span style="font-weight:500;font-size:11px">力仕事・運動習慣</span></button>
+      </div></div>
+    </div>
+    <div class="optrow">
+      <label class="toggle"><input type="checkbox" id="b_preg"><span>妊娠中(GDM・糖代謝異常合併妊娠)</span></label>
+      <div class="field" style="flex:0 0 150px;display:none" id="b_prewt_wrap"><label>非妊時体重</label><div class="inp"><input id="b_prewt" inputmode="decimal" placeholder="例 52"><span class="unit">kg</span></div></div>
+      <div class="field" style="flex:1 1 230px;display:none" id="b_tri_wrap"><label>妊娠時期</label><div class="seg" id="b_tri">
+        <button data-v="early" aria-pressed="false">初期<br><span style="font-weight:500;font-size:11px">〜13週</span></button>
+        <button data-v="mid" aria-pressed="true">中期<br><span style="font-weight:500;font-size:11px">14〜27週</span></button>
+        <button data-v="late" aria-pressed="false">後期<br><span style="font-weight:500;font-size:11px">28週〜</span></button>
       </div></div>
     </div>
     <div class="readout">
@@ -313,8 +322,10 @@
       <div class="chip none" id="b_chip"><span class="dot"></span><span id="b_class">入力待ち</span></div>
       <div class="ro-sub" style="margin-top:14px">
         <div>標準体重(BMI22) <b id="b_ibw">—</b> kg</div>
-        <div>目標体重 <b id="b_tw">—</b> kg</div>
-        <div>目標体重との差 <b id="b_diff">—</b> kg</div>
+        <div id="b_sub_tw">目標体重 <b id="b_tw">—</b> kg</div>
+        <div id="b_sub_diff">目標体重との差 <b id="b_diff">—</b> kg</div>
+        <div id="b_sub_prebmi" style="display:none">非妊時BMI <b id="b_prebmi">—</b> kg/m²</div>
+        <div id="b_sub_gain" style="display:none">体重増加 現在 <b id="b_gain">—</b> / 目安 <b id="b_gain_target">—</b></div>
       </div>
       <div class="ro-div"></div>
       <div class="ro-row"><span class="ro-label">指示エネルギーの目安</span></div>
@@ -322,7 +333,7 @@
       <div class="ro-sub"><div>エネルギー係数 <b id="b_coef">—</b> kcal/kg目標体重</div></div>
       <div class="interp" id="b_interp">身長と体重を入力するとBMIと指示エネルギーの目安を表示します。</div>
     </div>
-    <div class="hint">エネルギー量は「目安」であり、実際の指示は50〜100kcal単位に丸め、病態(肥満症・腎症・高齢者のフレイル等)・体組成・摂食状況に応じて個別化してください。75歳以上はADL・フレイルを踏まえ目標体重を柔軟に判断します。肥満(BMI≧25)ではまず現体重の3%減を目標とします。</div>
+    <div class="hint">エネルギー量は「目安」であり、実際の指示は50〜100kcal単位に丸め、病態(肥満症・腎症・高齢者のフレイル等)・体組成・摂食状況に応じて個別化してください。75歳以上はADL・フレイルを踏まえ目標体重を柔軟に判断します。肥満(BMI≧25)ではまず現体重の3%減を目標とします。妊娠中の付加量は食事摂取基準2020(初期+50/中期+250/後期+450kcal)、体重増加の目安は日本産科婦人科学会2021に基づきます。妊娠中の体重減量は行いません。</div>
   </section>
 
   <!-- INSULIN Rx -->
@@ -521,39 +532,104 @@
     document.querySelectorAll('#b_act button').forEach(x=>x.setAttribute('aria-pressed','false'));
     b.setAttribute('aria-pressed','true'); bmiCalc();
   }));
+  // 妊娠時: 指示エネルギー=標準体重×30+付加量(食事摂取基準2020: 初期+50/中期+250/後期+450)。
+  // 非妊時BMI≥25(肥満)は付加量なし(糖尿病治療ガイド)。体重増加目安=日本産科婦人科学会2021。
+  let bTri='mid';
+  const B_TRI={early:{add:50,label:'初期'},mid:{add:250,label:'中期'},late:{add:450,label:'後期'}};
+  document.querySelectorAll('#b_tri button').forEach(b=>b.addEventListener('click',()=>{
+    bTri=b.dataset.v;
+    document.querySelectorAll('#b_tri button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true'); bmiCalc();
+  }));
+  $('b_preg').addEventListener('change',bmiCalc);
+  function bmiClass(bmi){
+    if(bmi<18.5) return {cls:'warn',label:'低体重'};
+    if(bmi<25)   return {cls:'ok',label:'普通体重'};
+    if(bmi<30)   return {cls:'warn',label:'肥満(1度)'};
+    if(bmi<35)   return {cls:'warn',label:'肥満(2度)'};
+    if(bmi<40)   return {cls:'alert',label:'肥満(3度)・高度肥満'};
+    return {cls:'alert',label:'肥満(4度)・高度肥満'};
+  }
+  function gainTarget(preBmi){
+    if(preBmi<18.5) return '12〜15kg';
+    if(preBmi<25)   return '10〜13kg';
+    if(preBmi<30)   return '7〜10kg';
+    return '個別対応(上限5kg目安)';
+  }
   function bmiCalc(){
-    const ht=num($('b_ht').value), wt=num($('b_wt').value), age=num($('b_age').value);
+    const preg=$('b_preg').checked;
+    $('b_prewt_wrap').style.display=preg?'':'none';
+    $('b_tri_wrap').style.display=preg?'':'none';
+    $('b_act_wrap').style.opacity=preg?'.4':'1';
+    $('b_sub_tw').style.display=preg?'none':'';
+    $('b_sub_diff').style.display=preg?'none':'';
+    $('b_sub_prebmi').style.display=preg?'':'none';
+    $('b_sub_gain').style.display=preg?'':'none';
+    const ht=num($('b_ht').value), wt=num($('b_wt').value), age=num($('b_age').value), prewt=num($('b_prewt').value);
     if(ht===null||ht<=0){
-      ['b_bmi','b_ibw','b_tw','b_diff','b_energy','b_coef'].forEach(id=>$(id).textContent='—');
+      ['b_bmi','b_ibw','b_tw','b_diff','b_energy','b_coef','b_prebmi','b_gain','b_gain_target'].forEach(id=>$(id).textContent='—');
       setChip($('b_chip'),'none','入力待ち');
       $('b_interp').textContent='身長と体重を入力するとBMIと指示エネルギーの目安を表示します。';
       return;
     }
     const h2=Math.pow(ht/100,2), ibw=22*h2;
     $('b_ibw').textContent=fmt(ibw,1);
+    let notes=[];
+    const sg=n=>(n>=0?'+':'')+fmt(n,1);
+    if(wt!==null&&wt>0) $('b_bmi').textContent=fmt(wt/h2,1); else $('b_bmi').textContent='—';
+
+    if(preg){
+      // ---- 妊娠モード ----
+      const baseWt=(prewt!==null&&prewt>0)?prewt:((wt!==null&&wt>0)?wt:null);
+      const usingCurrent=(prewt===null||prewt<=0);
+      let preBmi=null;
+      if(baseWt!==null){
+        preBmi=baseWt/h2;
+        $('b_prebmi').textContent=fmt(preBmi,1)+(usingCurrent?'(現体重で代用)':'');
+        const c=bmiClass(preBmi);
+        setChip($('b_chip'),c.cls,'非妊時 '+c.label+'(BMI '+fmt(preBmi,1)+')');
+        $('b_gain_target').textContent=gainTarget(preBmi);
+        if(usingCurrent) notes.push('非妊時体重が未入力のため現体重で代用しています。肥満判定・付加量は非妊時BMIで行うため、非妊時体重の入力を推奨します。');
+      } else {
+        $('b_prebmi').textContent='—'; $('b_gain_target').textContent='—';
+        setChip($('b_chip'),'none','体重待ち');
+        notes.push('非妊時体重(または現体重)を入力すると判定します。');
+      }
+      if(prewt!==null&&prewt>0&&wt!==null&&wt>0) $('b_gain').textContent=sg(wt-prewt)+' kg';
+      else $('b_gain').textContent='—';
+      const tri=B_TRI[bTri];
+      if(preBmi!==null){
+        const obese=preBmi>=25;
+        const e=ibw*30+(obese?0:tri.add);
+        $('b_energy').textContent=fmt(e,0);
+        $('b_coef').textContent=obese?'30(肥満:付加量なし)':'30 +付加'+tri.add+'kcal('+tri.label+')';
+        notes.push(obese
+          ?'非妊時BMI25以上のため付加量なし(標準体重×30kcal)。極端な制限は避け、ケトーシスに注意してください。'
+          :'非肥満:標準体重×30kcal+妊娠'+tri.label+'付加量'+tri.add+'kcal。');
+        notes.push('食後高血糖・ケトーシス予防に分割食(4〜6回)も考慮。目標は母体の体重増加と胎児発育を見ながら個別調整を。');
+      } else { $('b_energy').textContent='—'; $('b_coef').textContent='—'; }
+      $('b_interp').textContent=notes.join(' ');
+      return;
+    }
+    // ---- 通常モード ----
     const elderly=age!==null&&age>=65;
     const twMin=22*h2, twMax=elderly?25*h2:22*h2;
     $('b_tw').textContent=elderly?fmt(twMin,1)+'〜'+fmt(twMax,1):fmt(twMin,1);
-    let notes=[];
     if(age===null) notes.push('年齢未入力のため65歳未満(目標体重=22×身長m²)として計算しています。');
     else if(age>=75) notes.push('75歳以上:ADL・フレイル・摂食状況を踏まえ目標体重を個別に判断してください。');
     if(wt!==null&&wt>0){
       const bmi=wt/h2;
-      $('b_bmi').textContent=fmt(bmi,1);
-      let cls,label,note;
-      if(bmi<18.5){cls='warn';label='低体重';note='低栄養・サルコペニアの評価も検討してください。';}
-      else if(bmi<25){cls='ok';label='普通体重';note='';}
-      else if(bmi<30){cls='warn';label='肥満(1度)';note='まず現体重の3%減量を目標に。';}
-      else if(bmi<35){cls='warn';label='肥満(2度)';note='まず現体重の3%減量を目標に。';}
-      else if(bmi<40){cls='alert';label='肥満(3度)・高度肥満';note='高度肥満:現体重の5〜10%減量が目安。専門的治療の適応も検討を。';}
-      else {cls='alert';label='肥満(4度)・高度肥満';note='高度肥満:現体重の5〜10%減量が目安。専門的治療の適応も検討を。';}
-      setChip($('b_chip'),cls,label+'(BMI '+fmt(bmi,1)+')');
+      const c=bmiClass(bmi);
+      let note='';
+      if(bmi<18.5) note='低栄養・サルコペニアの評価も検討してください。';
+      else if(bmi>=35) note='高度肥満:現体重の5〜10%減量が目安。専門的治療の適応も検討を。';
+      else if(bmi>=25) note='まず現体重の3%減量を目標に。';
+      setChip($('b_chip'),c.cls,c.label+'(BMI '+fmt(bmi,1)+')');
       if(note) notes.unshift(note);
       const dMin=wt-twMax, dMax=wt-twMin;
-      const sg=n=>(n>=0?'+':'')+fmt(n,1);
       $('b_diff').textContent=elderly?sg(dMin)+'〜'+sg(dMax):sg(dMax);
     } else {
-      $('b_bmi').textContent='—'; $('b_diff').textContent='—';
+      $('b_diff').textContent='—';
       setChip($('b_chip'),'none','体重待ち');
       notes.unshift('体重を入力するとBMIを判定します。');
     }
@@ -563,7 +639,7 @@
     $('b_coef').textContent=c[1]!==null?c[0]+'〜'+c[1]:c[0]+'〜';
     $('b_interp').textContent=notes.join(' ');
   }
-  ['b_ht','b_wt','b_age'].forEach(id=>$(id).addEventListener('input',bmiCalc));
+  ['b_ht','b_wt','b_age','b_prewt'].forEach(id=>$(id).addEventListener('input',bmiCalc));
 
   // ===== Na CORRECTION (物質収支) =====
   // 輸液プリセット(Na/K, mEq/L)。値は各製剤の添付文書で要確認。
