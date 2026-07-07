@@ -136,6 +136,7 @@
     <button class="tab" role="tab" aria-selected="false" data-tab="na">Na補正</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ogtt">75g OGTT</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="homa">HOMA</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="bmi">BMI・栄養</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ins">インスリン処方</button>
   </nav>
 
@@ -290,6 +291,38 @@
       <div class="interp" id="h_interp">HOMA-IR 1.6以下:正常 / 2.5以上:インスリン抵抗性あり。</div>
     </div>
     <div class="hint">HOMA-β = 360×IRI ÷(FPG−63)。基準値は概ね40–60%。空腹時血糖が63以下では算出できません。</div>
+  </section>
+
+  <!-- BMI / NUTRITION -->
+  <section class="panel" id="bmi" role="tabpanel">
+    <h2>BMI・栄養指導エネルギー量</h2>
+    <p class="note">BMI分類は日本肥満学会。指示エネルギーは目標体重×エネルギー係数(日本糖尿病学会 2019)。目標体重:65歳未満=22×身長m²、65歳以上=22〜25×身長m²。</p>
+    <div class="grid">
+      <div class="field"><label>身長</label><div class="inp"><input id="b_ht" inputmode="decimal" placeholder="例 160"><span class="unit">cm</span></div></div>
+      <div class="field"><label>体重</label><div class="inp"><input id="b_wt" inputmode="decimal" placeholder="例 65"><span class="unit">kg</span></div></div>
+      <div class="field"><label>年齢 <span class="u">目標体重の係数用・任意</span></label><div class="inp"><input id="b_age" inputmode="decimal" placeholder="例 62"><span class="unit">歳</span></div></div>
+      <div class="field full"><label>身体活動レベル(労作)</label><div class="seg" id="b_act">
+        <button data-v="light" aria-pressed="false">軽い<br><span style="font-weight:500;font-size:11px">座位中心</span></button>
+        <button data-v="normal" aria-pressed="true">普通<br><span style="font-weight:500;font-size:11px">通勤・家事等</span></button>
+        <button data-v="heavy" aria-pressed="false">重い<br><span style="font-weight:500;font-size:11px">力仕事・運動習慣</span></button>
+      </div></div>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">BMI</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="b_bmi">—</span><span class="ro-unit">kg/m²</span></div>
+      <div class="chip none" id="b_chip"><span class="dot"></span><span id="b_class">入力待ち</span></div>
+      <div class="ro-sub" style="margin-top:14px">
+        <div>標準体重(BMI22) <b id="b_ibw">—</b> kg</div>
+        <div>目標体重 <b id="b_tw">—</b> kg</div>
+        <div>目標体重との差 <b id="b_diff">—</b> kg</div>
+      </div>
+      <div class="ro-div"></div>
+      <div class="ro-row"><span class="ro-label">指示エネルギーの目安</span></div>
+      <div class="ro-second" style="margin-top:8px"><span class="v" id="b_energy">—</span><span class="ro-unit">kcal/日</span></div>
+      <div class="ro-sub"><div>エネルギー係数 <b id="b_coef">—</b> kcal/kg目標体重</div></div>
+      <div class="interp" id="b_interp">身長と体重を入力するとBMIと指示エネルギーの目安を表示します。</div>
+    </div>
+    <div class="hint">エネルギー量は「目安」であり、実際の指示は50〜100kcal単位に丸め、病態(肥満症・腎症・高齢者のフレイル等)・体組成・摂食状況に応じて個別化してください。75歳以上はADL・フレイルを踏まえ目標体重を柔軟に判断します。肥満(BMI≧25)ではまず現体重の3%減を目標とします。</div>
   </section>
 
   <!-- INSULIN Rx -->
@@ -477,6 +510,60 @@
     $('h_interp').textContent='HOMA-IR '+fmt(ir,2)+':'+txt+'。'+extra;
   }
   ['h_fpg','h_iri'].forEach(id=>$(id).addEventListener('input',homa));
+
+  // ===== BMI / NUTRITION =====
+  // BMI分類=日本肥満学会。エネルギー係数(kcal/kg目標体重)=日本糖尿病学会2019:
+  // 軽い労作25-30 / 普通の労作30-35 / 重い労作35〜。目標体重:65歳未満22×h²、65歳以上22-25×h²。
+  let bAct='normal';
+  const B_COEF={light:[25,30],normal:[30,35],heavy:[35,null]};
+  document.querySelectorAll('#b_act button').forEach(b=>b.addEventListener('click',()=>{
+    bAct=b.dataset.v;
+    document.querySelectorAll('#b_act button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true'); bmiCalc();
+  }));
+  function bmiCalc(){
+    const ht=num($('b_ht').value), wt=num($('b_wt').value), age=num($('b_age').value);
+    if(ht===null||ht<=0){
+      ['b_bmi','b_ibw','b_tw','b_diff','b_energy','b_coef'].forEach(id=>$(id).textContent='—');
+      setChip($('b_chip'),'none','入力待ち');
+      $('b_interp').textContent='身長と体重を入力するとBMIと指示エネルギーの目安を表示します。';
+      return;
+    }
+    const h2=Math.pow(ht/100,2), ibw=22*h2;
+    $('b_ibw').textContent=fmt(ibw,1);
+    const elderly=age!==null&&age>=65;
+    const twMin=22*h2, twMax=elderly?25*h2:22*h2;
+    $('b_tw').textContent=elderly?fmt(twMin,1)+'〜'+fmt(twMax,1):fmt(twMin,1);
+    let notes=[];
+    if(age===null) notes.push('年齢未入力のため65歳未満(目標体重=22×身長m²)として計算しています。');
+    else if(age>=75) notes.push('75歳以上:ADL・フレイル・摂食状況を踏まえ目標体重を個別に判断してください。');
+    if(wt!==null&&wt>0){
+      const bmi=wt/h2;
+      $('b_bmi').textContent=fmt(bmi,1);
+      let cls,label,note;
+      if(bmi<18.5){cls='warn';label='低体重';note='低栄養・サルコペニアの評価も検討してください。';}
+      else if(bmi<25){cls='ok';label='普通体重';note='';}
+      else if(bmi<30){cls='warn';label='肥満(1度)';note='まず現体重の3%減量を目標に。';}
+      else if(bmi<35){cls='warn';label='肥満(2度)';note='まず現体重の3%減量を目標に。';}
+      else if(bmi<40){cls='alert';label='肥満(3度)・高度肥満';note='高度肥満:現体重の5〜10%減量が目安。専門的治療の適応も検討を。';}
+      else {cls='alert';label='肥満(4度)・高度肥満';note='高度肥満:現体重の5〜10%減量が目安。専門的治療の適応も検討を。';}
+      setChip($('b_chip'),cls,label+'(BMI '+fmt(bmi,1)+')');
+      if(note) notes.unshift(note);
+      const dMin=wt-twMax, dMax=wt-twMin;
+      const sg=n=>(n>=0?'+':'')+fmt(n,1);
+      $('b_diff').textContent=elderly?sg(dMin)+'〜'+sg(dMax):sg(dMax);
+    } else {
+      $('b_bmi').textContent='—'; $('b_diff').textContent='—';
+      setChip($('b_chip'),'none','体重待ち');
+      notes.unshift('体重を入力するとBMIを判定します。');
+    }
+    const c=B_COEF[bAct];
+    const eMin=twMin*c[0], eMax=c[1]!==null?twMax*c[1]:null;
+    $('b_energy').textContent=eMax!==null?fmt(eMin,0)+'〜'+fmt(eMax,0):fmt(eMin,0)+'〜';
+    $('b_coef').textContent=c[1]!==null?c[0]+'〜'+c[1]:c[0]+'〜';
+    $('b_interp').textContent=notes.join(' ');
+  }
+  ['b_ht','b_wt','b_age'].forEach(id=>$(id).addEventListener('input',bmiCalc));
 
   // ===== Na CORRECTION (物質収支) =====
   // 輸液プリセット(Na/K, mEq/L)。値は各製剤の添付文書で要確認。
