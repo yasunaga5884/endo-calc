@@ -195,6 +195,7 @@
     <button class="tab" role="tab" aria-selected="false" data-tab="renal">eGFR/CCr</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="abx">抗菌薬用量</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="na">Na補正</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="ag">AG・ケトン</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="load">負荷試験</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ref">基準値</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="steroid">ステロイド</button>
@@ -337,6 +338,40 @@
       <div class="interp" id="n_interp">現在Na・体重を入力し、輸液や尿などを加えると予測します。</div>
     </div>
     <div class="hint">補正速度の上限は概ね 低Na血症で8〜10 mEq/L/日未満、高Na血症で10〜12 mEq/L/日未満(浸透圧性脱髄症候群・脳浮腫の回避)。予測は「速度一定」の近似であり、電解質・体液・尿量は経時的に再評価してください。安全上限速度は最初の輸液行を主輸液とみなし、他の入出量を固定して24h上昇/低下を安全域内に収める上限です。輸液のNa/K濃度は各製剤の添付文書でご確認ください。</div>
+  </section>
+
+  <!-- ANION GAP / KETONE ESTIMATE -->
+  <section class="panel" id="ag" role="tabpanel">
+    <h2>アニオンギャップ・ケトン体推算</h2>
+    <p class="note">電解質からAGを算出し、AG開大分(ΔAG)と乳酸から血中ケトン体を推算します。式:<b>ΔAG = 乳酸 + ケトン体/1000</b> を変形し <b>推定ケトン体(µmol/L) = (ΔAG − 乳酸) × 1000</b>。あくまで推算で、測定値の代わりにはなりません。</p>
+    <div class="grid">
+      <div class="field"><label>Na</label><div class="inp"><input id="ag_na" inputmode="decimal" placeholder="例 138"><span class="unit">mEq/L</span></div></div>
+      <div class="field"><label>Cl</label><div class="inp"><input id="ag_cl" inputmode="decimal" placeholder="例 100"><span class="unit">mEq/L</span></div></div>
+      <div class="field"><label>HCO₃⁻ <span class="u">重炭酸・BE不可</span></label><div class="inp"><input id="ag_hco3" inputmode="decimal" placeholder="例 10"><span class="unit">mmol/L</span></div></div>
+      <div class="field"><label>アルブミン <span class="u">補正用・任意</span></label><div class="inp"><input id="ag_alb" inputmode="decimal" placeholder="例 4.0"><span class="unit">g/dL</span></div></div>
+      <div class="field"><label>乳酸 <span class="u">Lactate</span></label><div class="inp"><input id="ag_lac" inputmode="decimal" placeholder="例 1.5"><span class="unit">mmol/L</span></div></div>
+      <div class="field" id="ag_k_wrap" style="display:none"><label>K</label><div class="inp"><input id="ag_k" inputmode="decimal" placeholder="例 4.0"><span class="unit">mEq/L</span></div></div>
+    </div>
+    <div class="optrow">
+      <label class="toggle"><input type="checkbox" id="ag_usek"><span>AGにKを含める(Na+K−Cl−HCO₃)</span></label>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label" id="ag_aglbl">アニオンギャップ AG</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="ag_ag">—</span><span class="ro-unit">mEq/L</span></div>
+      <div class="chip none" id="ag_chip"><span class="dot"></span><span id="ag_chip_t">入力待ち</span></div>
+      <div class="ro-sub" style="margin-top:14px">
+        <div>補正AG(Alb) <b id="ag_cag">—</b> mEq/L</div>
+        <div>正常AG <b id="ag_norm">—</b></div>
+        <div>AG開大分 ΔAG <b id="ag_delta">—</b> mEq/L</div>
+      </div>
+      <div class="ro-div"></div>
+      <div class="ro-row"><span class="ro-label">推定 血中ケトン体(総ケトン体)</span></div>
+      <div class="ro-second" style="margin-top:8px"><span class="v" id="ag_ket">—</span><span class="ro-unit">µmol/L</span></div>
+      <div class="ro-sub"><div>= <b id="ag_ket_mmol">—</b> mmol/L 相当</div><div>ΔAGのうち乳酸寄与 <b id="ag_lac_sh">—</b></div></div>
+      <div class="chip none" id="ag_kchip" style="margin-top:12px"><span class="dot"></span><span id="ag_kchip_t">乳酸・電解質を入力</span></div>
+      <div class="interp" id="ag_interp">Na・Cl・HCO₃を入力するとAGを、乳酸も入れると推定ケトン体を表示します。</div>
+    </div>
+    <div class="hint"><b>推算の前提と注意:</b> AG=Na−Cl−HCO₃(正常12±2、K含む式では約16)。補正AG=AG+2.5×(4.0−Alb)(低アルブミンでAGは過小評価。基準Alb・係数は出典で2.3〜2.5と幅あり)。ΔAG=補正AG−正常AG。<b>ケトン体は「ΔAGの乳酸で説明できない分がすべてケトン体由来」という仮定の粗い推算</b>で、その他の不揮発性酸(腎不全・中毒・サリチル酸等)があると過大評価します。AGが正常でもAG開大性アシドーシスは否定できません。確定には血中/尿中ケトン体・血液ガスの実測と臨床像を用いてください。(式の出典: naikainokakekomidera.com「血ガスの読み方②」)</div>
   </section>
 
   <!-- ANTIBIOTIC RENAL DOSING -->
@@ -1360,6 +1395,76 @@
   }
   $('n_clear').addEventListener('click',resetNa);
   nLineTemplate(0); calcNa();
+
+  // ===== ANION GAP / KETONE ESTIMATE =====
+  // AG=Na−Cl−HCO3(K含む式ではNa+K−Cl−HCO3)。補正AG=AG+2.5×(4.0−Alb)。
+  // ΔAG=補正AG−正常AG。参照ページの式 ΔAG=乳酸+ケトン体/1000 を変形:
+  // 推定ケトン体(µmol/L)=(ΔAG−乳酸)×1000。出典: naikainokakekomidera.com「血ガスの読み方②」。
+  $('ag_usek').addEventListener('change',()=>{ $('ag_k_wrap').style.display=$('ag_usek').checked?'':'none'; agCalc(); });
+  function agCalc(){
+    const na=num($('ag_na').value), cl=num($('ag_cl').value), hco3=num($('ag_hco3').value),
+          alb=num($('ag_alb').value), lac=num($('ag_lac').value), k=num($('ag_k').value);
+    const useK=$('ag_usek').checked;
+    const normAG=useK?16:12;
+    $('ag_aglbl').textContent=useK?'アニオンギャップ AG(K含む)':'アニオンギャップ AG';
+    $('ag_norm').textContent=String(normAG);
+    // AG算出に必要な値が揃っているか
+    const haveK=!useK||(k!==null);
+    if(na===null||cl===null||hco3===null||!haveK){
+      $('ag_ag').textContent='—'; $('ag_cag').textContent='—'; $('ag_delta').textContent='—';
+      setChip($('ag_chip'),'none','入力待ち');
+      $('ag_ket').textContent='—'; $('ag_ket_mmol').textContent='—'; $('ag_lac_sh').textContent='—';
+      setChip($('ag_kchip'),'none','乳酸・電解質を入力');
+      $('ag_interp').textContent=useK&&k===null?'Kを含める設定です。K値も入力してください。':'Na・Cl・HCO₃を入力するとAGを、乳酸も入れると推定ケトン体を表示します。';
+      return;
+    }
+    const ag=na+(useK?k:0)-cl-hco3;
+    $('ag_ag').textContent=fmt(ag,1);
+    // アルブミン補正(任意)
+    let cag=ag, corrected=false;
+    if(alb!==null){ cag=ag+2.5*(4.0-alb); corrected=true; }
+    $('ag_cag').textContent=corrected?fmt(cag,1):'—(Alb未入力)';
+    const delta=cag-normAG;
+    $('ag_delta').textContent=(delta>=0?'+':'')+fmt(delta,1);
+    // AG開大の判定(補正AGベース)
+    let acls,atxt;
+    if(cag<=normAG+2){ acls='ok'; atxt=(corrected?'補正AG':'AG')+' 正常域('+fmt(cag,1)+')'; }
+    else if(cag<=normAG+8){ acls='warn'; atxt=(corrected?'補正AG':'AG')+'開大('+fmt(cag,1)+')'; }
+    else { acls='alert'; atxt=(corrected?'補正AG':'AG')+'高度開大('+fmt(cag,1)+')'; }
+    setChip($('ag_chip'),acls,atxt);
+    // ケトン体推算(乳酸が必要)
+    if(lac===null){
+      $('ag_ket').textContent='—'; $('ag_ket_mmol').textContent='—'; $('ag_lac_sh').textContent='—';
+      setChip($('ag_kchip'),'none','乳酸を入力');
+      $('ag_interp').textContent='乳酸を入力すると、AG開大分から推定ケトン体を算出します。'+(corrected?'':' アルブミンを入れると低Alb補正も反映します。');
+      return;
+    }
+    const ket=(delta-lac)*1000; // µmol/L
+    const lacShare=delta>0?Math.min(100,Math.max(0,lac/delta*100)):null;
+    $('ag_lac_sh').textContent=lacShare!==null?fmt(lacShare,0)+'%':'—';
+    if(delta<=2){
+      $('ag_ket').textContent='—'; $('ag_ket_mmol').textContent='—';
+      setChip($('ag_kchip'),'ok','AG開大なし(ΔAG≦2)');
+      $('ag_interp').textContent='AGの開大がほとんどなく('+(delta>=0?'+':'')+fmt(delta,1)+')、ケトン体推算の意味は乏しい状態です。臨床像と実測で判断してください。';
+      return;
+    }
+    if(ket<0){
+      $('ag_ket').textContent='<0'; $('ag_ket_mmol').textContent='<0';
+      setChip($('ag_kchip'),'warn','乳酸がΔAGを上回る');
+      $('ag_interp').textContent='乳酸('+fmt(lac,1)+' mmol/L)がAG開大分('+fmt(delta,1)+')を上回り、推定ケトン体は0未満です。乳酸アシドーシス主体か、AG・乳酸の測定/前提の再確認を。';
+      return;
+    }
+    $('ag_ket').textContent=fmt(ket,0);
+    $('ag_ket_mmol').textContent=fmt(ket/1000,1);
+    let kcls,ktxt;
+    if(ket<500){ kcls='ok'; ktxt='ケトン体の寄与は小さい(<0.5 mmol/L)'; }
+    else if(ket<3000){ kcls='warn'; ktxt='ケトン体の寄与あり'; }
+    else { kcls='alert'; ktxt='ケトアシドーシスを示唆(高値)'; }
+    setChip($('ag_kchip'),kcls,ktxt);
+    $('ag_interp').textContent='ΔAG '+fmt(delta,1)+' のうち乳酸 '+fmt(lac,1)+' を除いた分をケトン体と仮定した推算です。腎不全・中毒など他の不揮発性酸があると過大評価します。血中/尿中ケトンの実測で確認を。';
+  }
+  ['ag_na','ag_cl','ag_hco3','ag_alb','ag_lac','ag_k'].forEach(id=>$(id).addEventListener('input',agCalc));
+  agCalc();
 
   // ===== INSULIN Rx =====
   const today=new Date(); today.setHours(0,0,0,0);
