@@ -48,6 +48,10 @@
     .tab{flex:0 0 auto;scroll-snap-align:center;padding:10px 13px}
     .ro-main{font-size:38px}
     .optrow{gap:12px 18px}
+    .patient{padding:9px 11px 11px;margin-top:12px}
+    .pt_sub{display:none}
+    .pt_head{margin-bottom:6px}
+    .pt_row{gap:8px 9px}
   }
   .field{display:flex;flex-direction:column;gap:5px}
   .field.full{grid-column:1/-1}
@@ -138,6 +142,30 @@
   .n_iline .res .sub{font-family:var(--mono)}
   .rq{display:inline-block;font-size:10px;font-weight:700;color:var(--warn);background:#FBF0DC;border-radius:5px;padding:1px 6px;margin-left:6px;vertical-align:middle}
   .rbasis{display:inline-block;font-size:10.5px;color:#7E948C;background:rgba(255,255,255,.06);border-radius:5px;padding:1px 6px;margin-left:6px}
+  .patient{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 13px 13px;margin-top:16px}
+  .pt_head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .pt_title{font-size:12.5px;font-weight:700;color:var(--accent)}
+  .pt_sub{font-size:11px;color:var(--muted);flex:1}
+  .pt_row{display:flex;gap:10px 12px;flex-wrap:wrap}
+  .pt_row .field{flex:1 1 86px;min-width:0}
+  .ptseg{flex:0 0 auto}
+  .ptseg button{padding:5px 14px;font-size:12.5px}
+  .numpad{position:fixed;left:0;right:0;bottom:0;z-index:80;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 24px rgba(16,33,29,.16);padding:8px 10px calc(10px + env(safe-area-inset-bottom,0px));display:none}
+  .numpad.open{display:block}
+  .np_inner{max-width:480px;margin:0 auto}
+  .np_head{display:flex;align-items:baseline;gap:8px;padding:2px 4px 8px}
+  .np_label{font-size:12px;font-weight:700;color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .np_val{font-family:var(--mono);font-size:21px;font-weight:600;color:var(--ink);white-space:nowrap}
+  .np_unit{font-size:11px;color:var(--muted);white-space:nowrap}
+  .np_kbd{border:1px solid var(--line);background:#fff;color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;padding:4px 9px;border-radius:7px;flex:none}
+  .np_grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .np_grid button{border:1px solid var(--line);background:#fff;border-radius:10px;font-family:var(--mono);font-size:21px;font-weight:600;color:var(--ink);padding:0;height:52px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .np_grid button:active{background:var(--accent-soft)}
+  .np_grid button.fn{font-family:var(--sans);font-size:14px;font-weight:700;color:var(--muted)}
+  .np_grid button.next{background:var(--accent-soft);border-color:var(--accent-soft);color:var(--accent);font-family:var(--sans);font-size:14px;font-weight:700}
+  .np_grid button.go{background:var(--accent);border-color:var(--accent);color:#fff;font-family:var(--sans);font-size:14px;font-weight:700}
+  .np_grid button:disabled{opacity:.3;cursor:default}
+  body.np-open{padding-bottom:350px}
   footer{margin-top:22px;font-size:11.5px;color:var(--muted);line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
   footer b{color:var(--ink)}
 </style>
@@ -149,6 +177,15 @@
     <h1>臨床計算ツール</h1>
     <div class="sub">外来向けの計算補助。日本糖尿病学会・日本腎臓学会の基準に準拠。</div>
   </header>
+
+  <div class="patient" id="pt_bar">
+    <div class="pt_head"><span class="pt_title">患者共通</span><span class="pt_sub">身長・体重・年齢・性別を全タブへ反映</span><div class="seg ptseg" id="pt_sex"><button data-v="male" aria-pressed="true">男性</button><button data-v="female" aria-pressed="false">女性</button></div><button type="button" class="clearbtn" id="pt_clear">クリア</button></div>
+    <div class="pt_row">
+      <div class="field"><label>身長</label><div class="inp"><input id="pt_ht" inputmode="decimal" placeholder="—"><span class="unit">cm</span></div></div>
+      <div class="field"><label>体重</label><div class="inp"><input id="pt_wt" inputmode="decimal" placeholder="—"><span class="unit">kg</span></div></div>
+      <div class="field"><label>年齢</label><div class="inp"><input id="pt_age" inputmode="decimal" placeholder="—"><span class="unit">歳</span></div></div>
+    </div>
+  </div>
 
   <nav class="tabs" role="tablist" aria-label="計算ツール">
     <button class="tab" role="tab" aria-selected="true"  data-tab="carb">カーボカウント</button>
@@ -518,6 +555,23 @@
   <footer>
     <b>ご利用にあたって</b> — 本ツールは計算補助であり、診断・治療・調剤の最終判断に代わるものではありません。数値・単位・適用条件をご確認のうえ、臨床判断と併せてお使いください。基準は日本糖尿病学会・日本腎臓学会の一般的な区分に基づいています。
   </footer>
+</div>
+
+<div class="numpad" id="np" aria-hidden="true">
+  <div class="np_inner">
+    <div class="np_head">
+      <span class="np_label" id="np_label">—</span>
+      <span class="np_val" id="np_val">—</span>
+      <span class="np_unit" id="np_unit"></span>
+      <button type="button" class="np_kbd" id="np_kbd">通常キーボード</button>
+    </div>
+    <div class="np_grid">
+      <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k="bs" class="fn">⌫</button>
+      <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="clr" class="fn">C</button>
+      <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="sp" class="fn" id="np_sp">空白</button>
+      <button type="button" data-k="0">0</button><button type="button" data-k=".">.</button><button type="button" data-k="next" class="next">次へ</button><button type="button" data-k="done" class="go">完了</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1469,6 +1523,113 @@
   lineTemplate('持効型');
   lineTemplate('超速効型');
   syncPeriod(); calcIns();
+
+  // ===== 患者共通情報(全タブ同期) =====
+  // 共通バー → 各タブへ一方向同期。タブ側の個別編集は共通バーを上書きしない。
+  // 患者情報のためlocalStorage等への保存はしない(リロードでクリア)。
+  const PT_MAP={pt_ht:['b_ht'],pt_wt:['b_wt','e_wt','n_wt'],pt_age:['b_age','e_age','n_age']};
+  Object.keys(PT_MAP).forEach(src=>{
+    $(src).addEventListener('input',()=>{
+      const v=$(src).value;
+      PT_MAP[src].forEach(id=>{ const el=$(id); if(el.value!==v){ el.value=v; el.dispatchEvent(new Event('input')); } });
+    });
+  });
+  document.querySelectorAll('#pt_sex button').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('#pt_sex button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true');
+    ['e_sex','n_sex','r_sex'].forEach(seg=>{
+      const t=document.querySelector('#'+seg+' button[data-v="'+b.dataset.v+'"]');
+      if(t&&t.getAttribute('aria-pressed')!=='true') t.click();
+    });
+  }));
+  $('pt_clear').addEventListener('click',()=>{
+    ['pt_ht','pt_wt','pt_age'].forEach(id=>$(id).value='');
+    Object.values(PT_MAP).flat().forEach(id=>{ const el=$(id); if(el.value!==''){ el.value=''; el.dispatchEvent(new Event('input')); } });
+  });
+
+  // ===== 大型テンキー(タッチ端末のみ・?np=1で強制ON/?np=0でOFF) =====
+  // 数値入力(inputmode=decimal と 1日単位数)にフォーカスすると画面下部にテンキーを表示。
+  // pointerdown時に inputmode=none にしてネイティブキーボードを抑止する。
+  (function(){
+    const q=new URLSearchParams(location.search).get('np');
+    const NP_ON=q==='1'||(q!=='0'&&matchMedia('(pointer:coarse)').matches);
+    if(!NP_ON) return;
+    const pad=$('np');
+    let act=null, fresh=false;
+    function isNum(el){
+      if(!el||el.tagName!=='INPUT'||el.dataset.npOff==='1') return false;
+      if(el.classList.contains('i_units')) return true;
+      const im=el.getAttribute('inputmode');
+      return im==='decimal'||(im==='none'&&el.dataset.np==='1');
+    }
+    function fieldLabel(el){
+      const f=el.closest('.field'); const lb=f?f.querySelector('label'):null;
+      if(!lb) return '数値入力';
+      const c=lb.cloneNode(true); c.querySelectorAll('.u').forEach(x=>x.remove());
+      return c.textContent.trim()||'数値入力';
+    }
+    function unitOf(el){ const box=el.closest('.inp'); const u=box?box.querySelector('.unit'):null; return u?u.textContent:''; }
+    function refresh(){ $('np_val').textContent=act.value===''?'—':act.value; }
+    function openPad(el){
+      act=el; fresh=true;
+      $('np_label').textContent=fieldLabel(el);
+      $('np_unit').textContent=unitOf(el);
+      $('np_sp').disabled=!el.classList.contains('i_units');
+      refresh();
+      pad.classList.add('open'); pad.setAttribute('aria-hidden','false');
+      document.body.classList.add('np-open');
+      setTimeout(()=>{ if(act===el) el.scrollIntoView({block:'center',behavior:'smooth'}); },60);
+    }
+    function closePad(){
+      if(!pad.classList.contains('open')) return;
+      pad.classList.remove('open'); pad.setAttribute('aria-hidden','true');
+      document.body.classList.remove('np-open');
+      act=null;
+    }
+    document.addEventListener('pointerdown',e=>{
+      const t=e.target;
+      if(t&&t.tagName==='INPUT'&&t.dataset.npOff!=='1'&&(t.getAttribute('inputmode')==='decimal'||t.classList.contains('i_units'))){
+        if(!t.dataset.npIm) t.dataset.npIm=t.getAttribute('inputmode')||'text';
+        t.setAttribute('inputmode','none'); t.dataset.np='1';
+      }
+      if(!e.target.closest('.numpad')&&!isNum(e.target)) closePad();
+    },true);
+    document.addEventListener('focusin',e=>{ if(isNum(e.target)) openPad(e.target); else closePad(); });
+    pad.addEventListener('pointerdown',e=>e.preventDefault());
+    pad.addEventListener('mousedown',e=>e.preventDefault());
+    pad.addEventListener('click',e=>{
+      const b=e.target.closest('button'); if(!b||!act) return;
+      if(b.id==='np_kbd'){
+        const el=act;
+        el.dataset.npOff='1';
+        el.setAttribute('inputmode', el.dataset.npIm==='text'?'text':'decimal');
+        closePad(); el.blur(); setTimeout(()=>el.focus(),0);
+        return;
+      }
+      const k=b.dataset.k; if(k==null) return;
+      if(k==='done'){ const el=act; closePad(); el.blur(); return; }
+      if(k==='next'){
+        const list=Array.prototype.slice.call(document.querySelectorAll('input')).filter(isNum).filter(x=>x.offsetParent!==null);
+        const i=list.indexOf(act);
+        const nx=list.length?list[(i+1)%list.length]:null;
+        if(nx) nx.focus();
+        return;
+      }
+      let v=act.value;
+      if(k==='bs'){ v=v.slice(0,-1); fresh=false; }
+      else if(k==='clr'){ v=''; fresh=true; }
+      else if(k==='sp'){ if(v&&!/\s$/.test(v)) v+=' '; fresh=false; }
+      else if(k==='.'){
+        if(fresh) v='0.';
+        else { const seg=v.split(/\s/).pop(); if(seg.indexOf('.')===-1) v+=(seg===''?'0.':'.'); }
+        fresh=false;
+      }
+      else { v=fresh?k:v+k; fresh=false; }
+      act.value=v;
+      act.dispatchEvent(new Event('input',{bubbles:true}));
+      refresh();
+    });
+  })();
 })();
 </script>
 </body>
