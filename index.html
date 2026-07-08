@@ -1856,6 +1856,75 @@
        else {cls='alert';label='超重症(4–5・ICU考慮)';}
        return {cls,label,detail:'合計 '+t+'/5 点。0=軽症(外来)、1–2=中等症、3=重症(入院)、4–5=超重症(ICU管理を考慮)。ショックがあれば点数によらず超重症として扱います。'};
      }},
+    {id:'ap_jpn', cat:'消化器・胆膵', name:'急性膵炎 重症度(厚労省)', type:'criteria',
+     note:'予後因子9項目(各1点)と造影CT Gradeで重症度を判定。予後因子≥3点 または CT Grade≥2 で重症。',
+     src:'出典: 急性膵炎診療ガイドライン(厚生労働省 急性膵炎重症度判定基準 2008)。重症例は集中治療・専門施設での管理を。',
+     items:[
+       {q:'① Base Excess≤−3mEq/L または ショック(sBP≤80)', o:YN},
+       {q:'② PaO₂≤60mmHg(room air) または 呼吸不全', o:YN},
+       {q:'③ BUN≥40(orCr≥2.0)mg/dL または 乏尿(輸液後尿量≤400mL/日)', o:YN},
+       {q:'④ LDH≥基準上限の2倍', o:YN},
+       {q:'⑤ 血小板≤10万/µL', o:YN},
+       {q:'⑥ 総Ca≤7.5mg/dL', o:YN},
+       {q:'⑦ CRP≥15mg/dL', o:YN},
+       {q:'⑧ SIRS陽性項目数≥3', o:YN},
+       {q:'⑨ 年齢≥70歳', o:YN},
+       {q:'造影CT Grade(炎症の膵外進展＋膵造影不良域)', o:[[0,'未評価'],[1,'Grade 1(CTスコア0–1)'],[2,'Grade 2(CTスコア2)'],[3,'Grade 3(CTスコア≥3)']]},
+     ],
+     evaluate:v=>{
+       const progn=v.slice(0,9).reduce((a,b)=>a+b,0), ctg=v[9];
+       const severe=progn>=3||ctg>=2;
+       const ctTxt=ctg===0?'未評価':'Grade'+ctg;
+       return {main:severe?'重症':'軽症', cls:severe?'alert':'ok', label:severe?'重症':'軽症',
+         detail:'予後因子 '+progn+'/9 点、造影CT '+ctTxt+'。予後因子≥3点 または CT Grade≥2 で重症。'+(severe?'重症例は臓器不全・合併症の監視と集中治療を。':'軽症でも発症48時間以内は繰り返し重症度を再評価してください。')};
+     }},
+    {id:'tg18_chol', cat:'消化器・胆膵', name:'急性胆管炎 重症度(TG18)', type:'criteria',
+     note:'臓器障害(いずれか)でGrade III、Grade II因子2つ以上でGrade II、それ以外Grade I。',
+     src:'出典: 急性胆管炎・胆嚢炎診療ガイドライン(TG18/東京ガイドライン2018)。Grade III=緊急ドレナージ＋臓器サポート。',
+     items:[
+       {q:'[III] 心血管障害(昇圧薬を要する低血圧)', o:YN},
+       {q:'[III] 神経障害(意識障害)', o:YN},
+       {q:'[III] 呼吸障害(P/F比<300)', o:YN},
+       {q:'[III] 腎障害(乏尿 or Cr>2.0mg/dL)', o:YN},
+       {q:'[III] 肝障害(PT-INR>1.5)', o:YN},
+       {q:'[III] 血液障害(血小板<10万/µL)', o:YN},
+       {q:'[II] WBC>12000 または <4000/µL', o:YN},
+       {q:'[II] 発熱≥39℃', o:YN},
+       {q:'[II] 年齢≥75歳', o:YN},
+       {q:'[II] 総ビリルビン≥5mg/dL', o:YN},
+       {q:'[II] 低アルブミン(<施設下限×0.7・概ね<2.8g/dL)', o:YN},
+     ],
+     evaluate:v=>{
+       const organ=v.slice(0,6).reduce((a,b)=>a+b,0), g2=v.slice(6,11).reduce((a,b)=>a+b,0);
+       let main,cls,label;
+       if(organ>=1){main='Grade III';cls='alert';label='重症(臓器障害あり)';}
+       else if(g2>=2){main='Grade II';cls='warn';label='中等症';}
+       else {main='Grade I';cls='ok';label='軽症';}
+       return {main,cls,label,detail:'臓器障害 '+organ+'/6、Grade II因子 '+g2+'/5。臓器障害あり→Grade III(緊急胆道ドレナージ＋臓器サポート)、Grade II因子≥2→Grade II(早期ドレナージ)、それ以外Grade I。診断はChampeau/TG18診断基準(全身炎症＋胆汁うっ滞＋画像)で別途。'};
+     }},
+    {id:'tg18_cholecyst', cat:'消化器・胆膵', name:'急性胆嚢炎 重症度(TG18)', type:'criteria',
+     note:'臓器障害(いずれか)でGrade III、Grade II因子いずれか1つでGrade II、それ以外Grade I。',
+     src:'出典: 急性胆管炎・胆嚢炎診療ガイドライン(TG18/東京ガイドライン2018)。胆嚢炎はGrade II因子が胆管炎と異なる。',
+     items:[
+       {q:'[III] 心血管障害(昇圧薬を要する低血圧)', o:YN},
+       {q:'[III] 神経障害(意識障害)', o:YN},
+       {q:'[III] 呼吸障害(P/F比<300)', o:YN},
+       {q:'[III] 腎障害(乏尿 or Cr>2.0mg/dL)', o:YN},
+       {q:'[III] 肝障害(PT-INR>1.5)', o:YN},
+       {q:'[III] 血液障害(血小板<10万/µL)', o:YN},
+       {q:'[II] WBC>18000/µL', o:YN},
+       {q:'[II] 右季肋部の有痛性腫瘤を触知', o:YN},
+       {q:'[II] 症状の持続>72時間', o:YN},
+       {q:'[II] 高度の局所炎症(壊疽性/気腫性胆嚢炎・胆嚢周囲膿瘍・肝膿瘍・胆汁性腹膜炎)', o:YN},
+     ],
+     evaluate:v=>{
+       const organ=v.slice(0,6).reduce((a,b)=>a+b,0), g2=v.slice(6,10).reduce((a,b)=>a+b,0);
+       let main,cls,label;
+       if(organ>=1){main='Grade III';cls='alert';label='重症(臓器障害あり)';}
+       else if(g2>=1){main='Grade II';cls='warn';label='中等症';}
+       else {main='Grade I';cls='ok';label='軽症';}
+       return {main,cls,label,detail:'臓器障害 '+organ+'/6、Grade II因子 '+g2+'/4。臓器障害あり→Grade III、Grade II因子≥1→Grade II、それ以外Grade I。Grade II/IIIは早期胆嚢摘出/ドレナージや全身管理を要件・全身状態に応じて検討。'};
+     }},
   ];
   const scSel=$('sc_sel');
   (function(){
@@ -1870,7 +1939,7 @@
     const s=scActive();
     $('sc_desc').textContent=s.note||'';
     $('sc_name').textContent=s.name;
-    $('sc_max').textContent=s.type==='formula'?'':'/ '+s.max+'点';
+    $('sc_max').textContent=(s.type==='formula'||s.type==='criteria')?'':'/ '+s.max+'点';
     $('sc_src').textContent=s.src||'';
     const box=$('sc_items'); box.innerHTML='';
     if(s.type==='formula'){
@@ -1922,6 +1991,13 @@
       return;
     }
     const vals=[...document.querySelectorAll('#sc_items .sc_i')].map(se=>Number(se.options[se.selectedIndex].dataset.pts));
+    if(s.type==='criteria'){
+      const r=s.evaluate(vals);
+      $('sc_total').textContent=r.main;
+      setChip($('sc_chip'),r.cls,r.label);
+      $('sc_detail').textContent=r.detail;
+      return;
+    }
     const total=vals.reduce((a,b)=>a+b,0);
     $('sc_total').textContent=String(total);
     const r=s.interpret(total,vals);
