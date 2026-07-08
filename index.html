@@ -56,6 +56,11 @@
   .toggle input:checked{background:var(--accent)}
   .toggle input::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .18s}
   .toggle input:checked::after{transform:translateX(16px)}
+  .ckgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px 14px;margin-top:8px}
+  @media (max-width:520px){.ckgrid{grid-template-columns:1fr}}
+  .ck{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;font-weight:600;cursor:pointer;user-select:none}
+  .ck input{accent-color:var(--accent);width:16px;height:16px;flex:none;cursor:pointer;margin-top:2px}
+  .ck .mk{color:var(--warn)}
   .readout{margin-top:20px;background:var(--readout-bg);border-radius:13px;padding:20px;color:#EAF2EF;position:relative;overflow:hidden}
   .readout::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 3px);pointer-events:none}
   .ro-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -398,6 +403,24 @@
         <button data-v="late" aria-pressed="false">後期<br><span style="font-weight:500;font-size:11px">28週〜</span></button>
       </div></div>
     </div>
+    <div id="b_obs_wrap">
+      <div class="nsub">肥満に関連する健康障害 <span class="u">該当項目をチェック(肥満症診断・薬物療法の適応判定用)</span></div>
+      <div class="ckgrid" id="b_obs">
+        <label class="ck"><input type="checkbox" data-cat="gi" data-gate="1"><span>2型糖尿病 <span class="mk">◆</span></span></label>
+        <label class="ck"><input type="checkbox" data-cat="gi"><span>耐糖能障害(IGT等・2型糖尿病以外)</span></label>
+        <label class="ck"><input type="checkbox" data-cat="dl" data-gate="1"><span>脂質異常症 <span class="mk">◆</span></span></label>
+        <label class="ck"><input type="checkbox" data-cat="ht" data-gate="1"><span>高血圧 <span class="mk">◆</span></span></label>
+        <label class="ck"><input type="checkbox" data-cat="ua"><span>高尿酸血症・痛風</span></label>
+        <label class="ck"><input type="checkbox" data-cat="cad"><span>冠動脈疾患</span></label>
+        <label class="ck"><input type="checkbox" data-cat="cvd"><span>脳梗塞・一過性脳虚血発作</span></label>
+        <label class="ck"><input type="checkbox" data-cat="nafld"><span>非アルコール性脂肪性肝疾患(NAFLD/MASLD)</span></label>
+        <label class="ck"><input type="checkbox" data-cat="mens"><span>月経異常・女性不妊</span></label>
+        <label class="ck"><input type="checkbox" data-cat="osa"><span>閉塞性睡眠時無呼吸症候群・肥満低換気症候群</span></label>
+        <label class="ck"><input type="checkbox" data-cat="ortho"><span>運動器疾患(変形性関節症・変形性脊椎症)</span></label>
+        <label class="ck"><input type="checkbox" data-cat="kid"><span>肥満関連腎臓病</span></label>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:6px"><span style="color:var(--warn);font-weight:700">◆</span> = ウゴービ・ゼップバウンドの前提条件(高血圧・脂質異常症・2型糖尿病のいずれか1つ以上が必須)</div>
+    </div>
     <div class="readout">
       <div class="ro-row"><span class="ro-label">BMI</span></div>
       <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="b_bmi">—</span><span class="ro-unit">kg/m²</span></div>
@@ -414,7 +437,15 @@
       <div class="ro-second" style="margin-top:8px"><span class="v" id="b_energy">—</span><span class="ro-unit">kcal/日</span></div>
       <div class="ro-sub"><div>エネルギー係数 <b id="b_coef">—</b> kcal/kg目標体重</div></div>
       <div class="interp" id="b_interp">身長と体重を入力するとBMIと指示エネルギーの目安を表示します。</div>
+      <div id="b_drug_wrap">
+        <div class="ro-div"></div>
+        <div class="ro-row"><span class="ro-label">肥満症薬物療法の適応目安</span></div>
+        <div class="chip none" id="b_dx_chip"><span class="dot"></span><span id="b_dx">入力待ち</span></div>
+        <div id="b_drug" style="margin-top:10px"></div>
+        <div class="interp" id="b_drug_interp">身長・体重を入力し、該当する健康障害をチェックすると適応の目安を表示します。</div>
+      </div>
     </div>
+    <div class="hint"><b>肥満症治療薬の留意点:</b>ウゴービ(セマグルチド)・ゼップバウンド(チルゼパチド)は最適使用推進ガイドラインにより施設要件・医師要件、6か月以上の食事療法・運動療法を実施しても十分な効果が得られないこと等が定められています。妊婦・妊娠の可能性のある女性には投与しません。サノレックス(マジンドール)は投与期間3か月以内で依存性・肺高血圧症に注意。本判定は目安であり、添付文書・最新のガイドラインを必ず確認してください。</div>
     <div class="hint">エネルギー量は「目安」であり、実際の指示は50〜100kcal単位に丸め、病態(肥満症・腎症・高齢者のフレイル等)・体組成・摂食状況に応じて個別化してください。75歳以上はADL・フレイルを踏まえ目標体重を柔軟に判断します。肥満(BMI≧25)ではまず現体重の3%減を目標とします。妊娠中の付加量は食事摂取基準2020(初期+50/中期+250/後期+450kcal)、体重増加の目安は日本産科婦人科学会2021に基づきます。妊娠中の体重減量は行いません。</div>
   </section>
 
@@ -951,11 +982,16 @@
     $('b_sub_diff').style.display=preg?'none':'';
     $('b_sub_prebmi').style.display=preg?'':'none';
     $('b_sub_gain').style.display=preg?'':'none';
+    $('b_obs_wrap').style.display=preg?'none':'';
+    $('b_drug_wrap').style.display=preg?'none':'';
     const ht=num($('b_ht').value), wt=num($('b_wt').value), age=num($('b_age').value), prewt=num($('b_prewt').value);
     if(ht===null||ht<=0){
       ['b_bmi','b_ibw','b_tw','b_diff','b_energy','b_coef','b_prebmi','b_gain','b_gain_target'].forEach(id=>$(id).textContent='—');
       setChip($('b_chip'),'none','入力待ち');
       $('b_interp').textContent='身長と体重を入力するとBMIと指示エネルギーの目安を表示します。';
+      setChip($('b_dx_chip'),'none','入力待ち');
+      $('b_drug').innerHTML='';
+      $('b_drug_interp').textContent='身長・体重を入力し、該当する健康障害をチェックすると適応の目安を表示します。';
       return;
     }
     const h2=Math.pow(ht/100,2), ibw=22*h2;
@@ -1024,8 +1060,60 @@
     $('b_energy').textContent=eMax!==null?fmt(eMin,0)+'〜'+fmt(eMax,0):fmt(eMin,0)+'〜';
     $('b_coef').textContent=c[1]!==null?c[0]+'〜'+c[1]:c[0]+'〜';
     $('b_interp').textContent=notes.join(' ');
+
+    // ---- 肥満症診断・薬物療法の適応目安 ----
+    // ウゴービ(セマグルチド)・ゼップバウンド(チルゼパチド)添付文書:
+    // 高血圧・脂質異常症・2型糖尿病のいずれかを有し、食事療法・運動療法で効果不十分、
+    // かつ BMI27以上+肥満関連健康障害2つ以上 または BMI35以上。
+    // サノレックス(マジンドール):高度肥満症(肥満度+70%以上またはBMI35以上)。
+    // 健康障害11項目=肥満症診療ガイドライン2022(耐糖能障害はカテゴリとして1つに数える)。
+    const checkedHD=[...document.querySelectorAll('#b_obs input:checked')];
+    const nHD=new Set(checkedHD.map(x=>x.dataset.cat)).size;
+    const gate=checkedHD.some(x=>x.dataset.gate==='1');
+    const bmiV=(wt!==null&&wt>0)?wt/h2:null;
+    let dnotes=[];
+    if(bmiV===null){
+      setChip($('b_dx_chip'),'none','体重入力待ち');
+    } else if(bmiV<25){
+      setChip($('b_dx_chip'),'ok','肥満(BMI25以上)に非該当');
+    } else {
+      const sev=bmiV>=35;
+      if(nHD>=1) setChip($('b_dx_chip'),sev?'alert':'warn',(sev?'高度肥満症':'肥満症')+'に該当(健康障害'+nHD+'項目)');
+      else {
+        setChip($('b_dx_chip'),'warn',(sev?'高度肥満':'肥満')+'(健康障害の該当なし)');
+        dnotes.push('健康障害がなくても内臓脂肪面積100cm²以上(ウエスト周囲長 男性85cm/女性90cm以上でスクリーニング)なら肥満症と診断できます。');
+      }
+    }
+    let gCls='none',gTxt='体重入力待ち';
+    if(bmiV!==null){
+      if(gate&&(bmiV>=35||(bmiV>=27&&nHD>=2))){
+        gCls='ok'; gTxt='適応の可能性あり';
+        dnotes.push('ウゴービ・ゼップバウンド:'+(bmiV>=35?'BMI35以上':'BMI27以上+健康障害2項目以上')+'かつ前提条件(◆)を満たします。食事療法・運動療法で効果不十分であることが前提です。');
+      } else {
+        gCls='none'; gTxt='基準を満たさない';
+        const r=[];
+        if(bmiV<27) r.push('BMI27未満');
+        else if(bmiV<35&&nHD<2) r.push('BMI35未満では健康障害2項目以上が必要(現在'+nHD+'項目)');
+        if(!gate) r.push('高血圧・脂質異常症・2型糖尿病(◆)のいずれも該当なし');
+        if(r.length) dnotes.push('ウゴービ・ゼップバウンド:'+r.join('、')+'。');
+      }
+    }
+    let mCls='none',mTxt='体重入力待ち';
+    if(bmiV!==null){
+      if(bmiV>=35){ mCls='ok'; mTxt='適応の可能性あり'; }
+      else mTxt='適応外(BMI35未満)';
+    }
+    $('b_drug').innerHTML=
+      drugRow('セマグルチド(ウゴービ)・チルゼパチド(ゼップバウンド)','BMI27以上+健康障害2項目以上 または BMI35以上(◆のいずれか必須)',gCls,gTxt)+
+      drugRow('マジンドール(サノレックス)','高度肥満症(BMI35以上)・投与3か月以内',mCls,mTxt);
+    $('b_drug_interp').textContent=dnotes.join(' ')||'該当する健康障害をチェックすると判定に反映されます。';
+  }
+  function drugRow(name,sub,cls,txt){
+    const col=cls==='ok'?'#7EE0AE':cls==='warn'?'#F2C572':cls==='alert'?'#F1A0AA':'#8EA29A';
+    return '<div class="supply"><div class="sname">'+name+'<span>'+sub+'</span></div><div class="sval"><div style="font-size:13px;font-weight:700;color:'+col+'">'+txt+'</div></div></div>';
   }
   ['b_ht','b_wt','b_age','b_prewt'].forEach(id=>$(id).addEventListener('input',bmiCalc));
+  document.querySelectorAll('#b_obs input').forEach(c=>c.addEventListener('change',bmiCalc));
 
   // ===== Na CORRECTION (物質収支) =====
   // 輸液プリセット(Na/K, mEq/L)。値は各製剤の添付文書で要確認。
