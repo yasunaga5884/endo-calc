@@ -1801,6 +1801,61 @@
        else {cls='ok';label='低リスク(0–1)';}
        return {cls,label,detail:'合計 '+t+' 点。≥3で高出血リスク。是正可能因子(コントロール不良の高血圧・抗血小板薬/NSAIDs・アルコール・INR不安定)の管理と定期的な再評価を。単独で抗凝固中止の根拠にはしません。'};
      }},
+    {id:'fib4', cat:'肝', name:'FIB-4 index 肝線維化', type:'formula', dp:2,
+     note:'NAFLD/MASLD等の進行した肝線維化(F3–4)のスクリーニング。年齢・AST・ALT・血小板から算出。',
+     src:'出典: Sterlingら 2006。<1.30で進行線維化は否定的、>2.67で示唆(1.30–2.67は判定保留)。65歳以上は下限2.0での解釈も。血小板は×10⁴/µL(万)入力→内部で×10⁹/Lへ換算。',
+     inputs:[
+       {id:'age',label:'年齢',unit:'歳',ph:'例 62',pt:'age'},
+       {id:'ast',label:'AST(GOT)',unit:'U/L',ph:'例 40'},
+       {id:'alt',label:'ALT(GPT)',unit:'U/L',ph:'例 35'},
+       {id:'plt',label:'血小板',unit:'×10⁴/µL',ph:'例 20'},
+     ],
+     compute:v=>{ if(v.alt<=0||v.plt<=0) return {score:null}; return {score:(v.age*v.ast)/((v.plt*10)*Math.sqrt(v.alt))}; },
+     interpret:(s,v)=>{
+       let cls,label;
+       if(s>2.67){cls='alert';label='高値(>2.67・進行線維化を示唆)';}
+       else if(s>=1.30){cls='warn';label='判定保留(1.30–2.67)';}
+       else {cls='ok';label='低値(<1.30・進行線維化は否定的)';}
+       return {cls,label,detail:'FIB-4 = '+fmt(s,2)+'。<1.30で進行した肝線維化は否定的、>2.67で示唆、間は判定保留(追加評価へ)。'+(v.age>=65?' 65歳以上のため下限を2.0とする解釈(<2.0を低リスク)も考慮。':'')};
+     }},
+    {id:'nfs', cat:'肝', name:'NAFLD fibrosis score', type:'formula', dp:2,
+     note:'NAFLD/MASLDの進行線維化(F3–4)予測。年齢・BMI・IFG/DM・AST/ALT・血小板・Albから算出。',
+     src:'出典: Anguloら 2007。<−1.455で進行線維化を除外、>0.676で示唆(間は判定保留)。65歳以上は下限0.12での解釈も。血小板は×10⁴/µL(万)入力。',
+     inputs:[
+       {id:'age',label:'年齢',unit:'歳',ph:'例 62',pt:'age'},
+       {id:'bmi',label:'BMI',unit:'kg/m²',ph:'例 28',pt:'bmi'},
+       {id:'dm',label:'IFG または 糖尿病',opts:[[0,'なし'],[1,'あり']]},
+       {id:'ast',label:'AST(GOT)',unit:'U/L',ph:'例 40'},
+       {id:'alt',label:'ALT(GPT)',unit:'U/L',ph:'例 35'},
+       {id:'plt',label:'血小板',unit:'×10⁴/µL',ph:'例 20'},
+       {id:'alb',label:'アルブミン',unit:'g/dL',ph:'例 4.0'},
+     ],
+     compute:v=>{ if(v.alt<=0) return {score:null}; return {score:-1.675+0.037*v.age+0.094*v.bmi+1.13*v.dm+0.99*(v.ast/v.alt)-0.013*(v.plt*10)-0.66*v.alb}; },
+     interpret:(s,v)=>{
+       let cls,label;
+       if(s>0.676){cls='alert';label='高値(>0.676・進行線維化を示唆)';}
+       else if(s>=-1.455){cls='warn';label='判定保留(−1.455〜0.676)';}
+       else {cls='ok';label='低値(<−1.455・進行線維化を除外)';}
+       return {cls,label,detail:'NFS = '+fmt(s,2)+'。<−1.455で進行線維化を除外、>0.676で示唆、間は判定保留(追加評価へ)。'+(v.age>=65?' 65歳以上のため下限を0.12とする解釈も考慮。':'')};
+     }},
+    {id:'adrop', cat:'呼吸器', name:'A-DROP 市中肺炎重症度', max:5,
+     note:'成人市中肺炎(CAP)の重症度。各項目 該当=1点。ショックがあれば点数によらず超重症。',
+     src:'出典: 日本呼吸器学会 成人肺炎診療ガイドライン(A-DROP)。0軽症/1–2中等症/3重症/4–5超重症。',
+     items:[
+       {q:'A: 年齢(男性≥70歳 または 女性≥75歳)', o:YN},
+       {q:'D: 脱水(BUN≥21mg/dL または 脱水所見)', o:YN},
+       {q:'R: 呼吸(SpO₂≤90% または PaO₂≤60Torr)', o:YN},
+       {q:'O: 意識障害', o:YN},
+       {q:'P: 血圧(収縮期≤90mmHg)', o:YN},
+     ],
+     interpret:t=>{
+       let cls,label;
+       if(t===0){cls='ok';label='軽症(0・外来)';}
+       else if(t<=2){cls='warn';label='中等症(1–2・外来/入院)';}
+       else if(t===3){cls='alert';label='重症(3・入院)';}
+       else {cls='alert';label='超重症(4–5・ICU考慮)';}
+       return {cls,label,detail:'合計 '+t+'/5 点。0=軽症(外来)、1–2=中等症、3=重症(入院)、4–5=超重症(ICU管理を考慮)。ショックがあれば点数によらず超重症として扱います。'};
+     }},
   ];
   const scSel=$('sc_sel');
   (function(){
@@ -1815,22 +1870,57 @@
     const s=scActive();
     $('sc_desc').textContent=s.note||'';
     $('sc_name').textContent=s.name;
-    $('sc_max').textContent='/ '+s.max+'点';
+    $('sc_max').textContent=s.type==='formula'?'':'/ '+s.max+'点';
     $('sc_src').textContent=s.src||'';
     const box=$('sc_items'); box.innerHTML='';
-    s.items.forEach((it,i)=>{
-      const f=document.createElement('div'); f.className='field full sc_field';
-      const lb=document.createElement('label'); lb.textContent=it.q; f.appendChild(lb);
-      const wrap=document.createElement('div'); wrap.className='inp';
-      const sel=document.createElement('select'); sel.className='sc_i'; sel.dataset.i=i;
-      it.o.forEach((o,j)=>{ const op=document.createElement('option'); op.value=j; op.dataset.pts=o[0]; op.textContent=o[0]+' : '+o[1]; sel.appendChild(op); });
-      sel.addEventListener('change',scCalc);
-      wrap.appendChild(sel); f.appendChild(wrap); box.appendChild(f);
-    });
+    if(s.type==='formula'){
+      s.inputs.forEach(it=>{
+        const f=document.createElement('div'); f.className='field full sc_field';
+        const lb=document.createElement('label'); lb.textContent=it.label; f.appendChild(lb);
+        const wrap=document.createElement('div'); wrap.className='inp';
+        if(it.opts){
+          const sel=document.createElement('select'); sel.className='sc_f'; sel.dataset.fid=it.id;
+          it.opts.forEach((o,j)=>{ const op=document.createElement('option'); op.value=j; op.dataset.pts=o[0]; op.textContent=o[1]; sel.appendChild(op); });
+          sel.addEventListener('change',scCalc); wrap.appendChild(sel);
+        } else {
+          const inp=document.createElement('input'); inp.className='sc_f'; inp.dataset.fid=it.id; inp.setAttribute('inputmode','decimal'); if(it.ph) inp.placeholder=it.ph;
+          if(it.pt==='age'&&$('pt_age').value) inp.value=$('pt_age').value;
+          if(it.pt==='bmi'){ const h=num($('pt_ht').value),w=num($('pt_wt').value); if(h&&w) inp.value=fmt(w/Math.pow(h/100,2),1); }
+          inp.addEventListener('input',scCalc); wrap.appendChild(inp);
+          if(it.unit){ const u=document.createElement('span'); u.className='unit'; u.textContent=it.unit; wrap.appendChild(u); }
+        }
+        f.appendChild(wrap); box.appendChild(f);
+      });
+    } else {
+      s.items.forEach((it,i)=>{
+        const f=document.createElement('div'); f.className='field full sc_field';
+        const lb=document.createElement('label'); lb.textContent=it.q; f.appendChild(lb);
+        const wrap=document.createElement('div'); wrap.className='inp';
+        const sel=document.createElement('select'); sel.className='sc_i'; sel.dataset.i=i;
+        it.o.forEach((o,j)=>{ const op=document.createElement('option'); op.value=j; op.dataset.pts=o[0]; op.textContent=o[0]+' : '+o[1]; sel.appendChild(op); });
+        sel.addEventListener('change',scCalc);
+        wrap.appendChild(sel); f.appendChild(wrap); box.appendChild(f);
+      });
+    }
     scCalc();
   }
   function scCalc(){
     const s=scActive();
+    if(s.type==='formula'){
+      const v={}; let missing=false;
+      document.querySelectorAll('#sc_items .sc_f').forEach(el=>{
+        if(el.tagName==='SELECT'){ v[el.dataset.fid]=Number(el.options[el.selectedIndex].dataset.pts); }
+        else { const n=num(el.value); v[el.dataset.fid]=n; if(n===null) missing=true; }
+      });
+      if(missing){ $('sc_total').textContent='—'; setChip($('sc_chip'),'none','必要な値を入力'); $('sc_detail').textContent='すべての数値を入力すると算出します。'; return; }
+      const res=s.compute(v);
+      if(res.score===null||!isFinite(res.score)){ $('sc_total').textContent='—'; setChip($('sc_chip'),'warn','入力値を確認'); $('sc_detail').textContent='算出できません。ALT・血小板が0でないか確認してください。'; return; }
+      $('sc_total').textContent=fmt(res.score,s.dp==null?2:s.dp);
+      const r=s.interpret(res.score,v);
+      setChip($('sc_chip'),r.cls,r.label);
+      $('sc_detail').textContent=r.detail;
+      return;
+    }
     const vals=[...document.querySelectorAll('#sc_items .sc_i')].map(se=>Number(se.options[se.selectedIndex].dataset.pts));
     const total=vals.reduce((a,b)=>a+b,0);
     $('sc_total').textContent=String(total);
@@ -1839,7 +1929,11 @@
     $('sc_detail').textContent=r.detail;
   }
   scSel.addEventListener('change',scRender);
-  $('sc_reset').addEventListener('click',()=>{ document.querySelectorAll('#sc_items .sc_i').forEach(se=>se.selectedIndex=0); scCalc(); });
+  $('sc_reset').addEventListener('click',()=>{
+    document.querySelectorAll('#sc_items .sc_i').forEach(se=>se.selectedIndex=0);
+    document.querySelectorAll('#sc_items .sc_f').forEach(el=>{ if(el.tagName==='SELECT') el.selectedIndex=0; else el.value=''; });
+    scCalc();
+  });
   scRender();
 
   // ===== 大型テンキー(タッチ端末のみ・?np=1で強制ON/?np=0でOFF) =====
