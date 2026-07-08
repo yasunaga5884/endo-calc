@@ -119,6 +119,9 @@
   .iline .rem{font-size:11.5px;font-family:var(--mono);color:var(--muted)}
   .iline .rem.tight{color:var(--warn);font-weight:700}
   @media (max-width:560px){.iline .igrid{grid-template-columns:1fr}}
+  #sc_items{display:flex;flex-direction:column;gap:9px;margin-top:4px}
+  .sc_field label{font-size:12.5px;line-height:1.4}
+  .sc_field .inp select{font-weight:500}
   .sumhint{font-size:11.5px;font-family:var(--mono);color:var(--accent);font-weight:600;min-height:15px}
   .rm{position:absolute;top:10px;right:10px;border:none;background:transparent;color:var(--muted);font-size:18px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}
   .rm:hover{background:#F0E4E5;color:var(--alert)}
@@ -199,6 +202,7 @@
     <button class="tab" role="tab" aria-selected="false" data-tab="load">負荷試験</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ref">基準値</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="steroid">ステロイド</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="score">スコア</button>
   </nav>
 
   <!-- CARB -->
@@ -463,6 +467,24 @@
       <div class="interp" id="s_interp">薬剤と用量を入力すると各製剤の等価用量を表示します。</div>
     </div>
     <div class="hint">本換算は<b>抗炎症(グルココルチコイド)力価</b>に基づく目安です。鉱質コルチコイド作用・生物学的半減期は製剤ごとに異なり、副腎不全の補充・ストレス用量や、長期投与からの減量・中止はこの換算のみで判断せず個別に検討してください。ステロイド糖尿病では食後高血糖が主体となりやすく、血糖モニタリングを併せて行います。(等価用量の出典:標準的な薬理学的等価表)</div>
+  </section>
+
+  <!-- CLINICAL SCORES -->
+  <section class="panel" id="score" role="tabpanel">
+    <div class="panelhead"><h2>臨床スコアリング</h2><button type="button" class="clearbtn" id="sc_reset">リセット</button></div>
+    <p class="note">スコアを選び各項目を選択すると合計と判定を自動表示します。判定はスクリーニング・重症度の目安で、確定診断・治療方針は臨床像と併せて判断してください。</p>
+    <div class="grid">
+      <div class="field full"><label>スコアを選択</label><div class="inp"><select id="sc_sel"></select></div></div>
+    </div>
+    <p class="note" id="sc_desc" style="margin:2px 0 10px"></p>
+    <div id="sc_items"></div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label" id="sc_name">—</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="sc_total">—</span><span class="ro-unit" id="sc_max">—</span></div>
+      <div class="chip none" id="sc_chip"><span class="dot"></span><span id="sc_chip_t">項目を選択</span></div>
+      <div class="interp" id="sc_detail"></div>
+    </div>
+    <div class="hint" id="sc_src"></div>
   </section>
 
   <!-- BMI / NUTRITION -->
@@ -1651,6 +1673,174 @@
     ['pt_ht','pt_wt','pt_age'].forEach(id=>$(id).value='');
     Object.values(PT_MAP).flat().forEach(id=>{ const el=$(id); if(el.value!==''){ el.value=''; el.dispatchEvent(new Event('input')); } });
   });
+
+  // ===== 臨床スコアリング =====
+  // データ駆動レジストリ。項目=select(option値はindex、点数はdata-pts)。
+  // interpret(total, vals)→{cls,label,detail}。スコア追加はSCORESに要素を足すだけ。
+  const YN=[[0,'なし'],[1,'あり']];
+  const SCORES=[
+    {id:'nihss', cat:'神経・認知', name:'NIHSS 脳卒中重症度', max:42,
+     note:'脳卒中の神経学的重症度。各項目を実際の所見どおりに選択(推測で埋めない)。',
+     src:'出典: NIH Stroke Scale(NINDS)。0–42点。UN(検査不能)項目は0点として加算する運用。',
+     items:[
+       {q:'1a. 意識水準(LOC)', o:[[0,'覚醒・鋭敏'],[1,'軽い刺激で覚醒'],[2,'繰り返し/強い刺激で反応'],[3,'反射のみ・無反応']]},
+       {q:'1b. 質問(今月・年齢)', o:[[0,'両方正解'],[1,'片方正解'],[2,'両方不正解']]},
+       {q:'1c. 従命(開閉眼・手の握離)', o:[[0,'両方遂行'],[1,'片方遂行'],[2,'両方不可']]},
+       {q:'2. 最良の注視', o:[[0,'正常'],[1,'部分的注視麻痺'],[2,'完全注視麻痺(共同偏視)']]},
+       {q:'3. 視野', o:[[0,'欠損なし'],[1,'部分半盲'],[2,'完全半盲'],[3,'両側半盲/全盲']]},
+       {q:'4. 顔面麻痺', o:[[0,'正常'],[1,'軽度(鼻唇溝平坦)'],[2,'部分(下部顔面)'],[3,'完全(上下)']]},
+       {q:'5a. 上肢(左)', o:[[0,'下垂なし(10秒保持)'],[1,'10秒以内に下垂'],[2,'重力に抗せず落下'],[3,'重力に抗せない'],[4,'全く動かない'],[0,'UN 検査不能(切断/癒合)']]},
+       {q:'5b. 上肢(右)', o:[[0,'下垂なし(10秒保持)'],[1,'10秒以内に下垂'],[2,'重力に抗せず落下'],[3,'重力に抗せない'],[4,'全く動かない'],[0,'UN 検査不能(切断/癒合)']]},
+       {q:'6a. 下肢(左)', o:[[0,'下垂なし(5秒保持)'],[1,'5秒以内に下垂'],[2,'重力に抗せず落下'],[3,'重力に抗せない'],[4,'全く動かない'],[0,'UN 検査不能']]},
+       {q:'6b. 下肢(右)', o:[[0,'下垂なし(5秒保持)'],[1,'5秒以内に下垂'],[2,'重力に抗せず落下'],[3,'重力に抗せない'],[4,'全く動かない'],[0,'UN 検査不能']]},
+       {q:'7. 運動失調', o:[[0,'なし'],[1,'1肢'],[2,'2肢']]},
+       {q:'8. 感覚', o:[[0,'正常'],[1,'軽度〜中等度'],[2,'重度〜脱失']]},
+       {q:'9. 最良の言語(失語)', o:[[0,'正常'],[1,'軽度〜中等度'],[2,'重度失語'],[3,'全失語/無言']]},
+       {q:'10. 構音障害', o:[[0,'正常'],[1,'軽度〜中等度'],[2,'重度/理解不能'],[0,'UN 挿管等']]},
+       {q:'11. 消去・無視', o:[[0,'なし'],[1,'1様式の無視'],[2,'半側無視/2様式以上']]},
+     ],
+     interpret:t=>{
+       let cls,label;
+       if(t===0){cls='ok';label='症状なし(0)';}
+       else if(t<=4){cls='ok';label='軽症(1–4)';}
+       else if(t<=15){cls='warn';label='中等症(5–15)';}
+       else if(t<=20){cls='alert';label='中等〜重症(16–20)';}
+       else {cls='alert';label='重症(21–42)';}
+       return {cls,label,detail:'合計 '+t+' 点。≥6点は主幹動脈閉塞・血栓回収療法を検討する目安の一つ(施設プロトコルに従う)。UN項目は0点として加算しています。'};
+     }},
+    {id:'hdsr', cat:'神経・認知', name:'HDS-R 改訂長谷川式', max:30,
+     note:'認知症スクリーニング(30点満点)。教育歴・難聴・せん妄・うつで低下しうる。',
+     src:'出典: 加藤ら 改訂長谷川式簡易知能評価スケール(HDS-R, 1991)。カットオフ20/21。',
+     items:[
+       {q:'1. お歳(2年以内で正解)', o:[[0,'不正解'],[1,'正解']]},
+       {q:'2. 見当識(年/月/日/曜日の正答数)', o:[[0,'0'],[1,'1'],[2,'2'],[3,'3'],[4,'4']]},
+       {q:'3. 場所(自発2/ヒントで1)', o:[[0,'不可'],[1,'ヒントで(1)'],[2,'自発(2)']]},
+       {q:'4. 3単語の即時復唱(各1)', o:[[0,'0'],[1,'1'],[2,'2'],[3,'3']]},
+       {q:'5. 計算(100−7,さらに−7)', o:[[0,'0'],[1,'1'],[2,'2']]},
+       {q:'6. 数字の逆唱(3桁/4桁)', o:[[0,'0'],[1,'1'],[2,'2']]},
+       {q:'7. 3単語の遅延再生(自発各2/ヒント各1)', o:[[0,'0'],[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5'],[6,'6']]},
+       {q:'8. 5物品の記銘(各1)', o:[[0,'0'],[1,'1'],[2,'2'],[3,'3'],[4,'4'],[5,'5']]},
+       {q:'9. 野菜の名前(語想起)', o:[[0,'0〜5個(0)'],[1,'6個(1)'],[2,'7個(2)'],[3,'8個(3)'],[4,'9個(4)'],[5,'10個以上(5)']]},
+     ],
+     interpret:t=>{
+       const cls=t>=21?'ok':'warn', label=t>=21?'非認知症域(≥21)':'認知症の疑い(≤20)';
+       return {cls,label,detail:'合計 '+t+'/30 点。カットオフ20/21のスクリーニングで確定診断ではありません。低教育歴・難聴・せん妄・うつ状態でも低下しえます。'};
+     }},
+    {id:'cas', cat:'内分泌', name:'CAS 甲状腺眼症 活動性', max:7,
+     note:'甲状腺眼症(バセドウ病眼症)の炎症活動性。初診時の7項目版。各項目 該当=1。',
+     src:'出典: Mouritsら Clinical Activity Score(EUGOGO採用)。≥3/7で活動性。経過観察時は前回比較3項目を加えた10点版を用いる。',
+     items:[
+       {q:'1. 自発的な眼球後部痛(過去4週)', o:YN},
+       {q:'2. 眼球運動時の痛み(過去4週)', o:YN},
+       {q:'3. 眼瞼の発赤', o:YN},
+       {q:'4. 結膜の発赤(びまん性充血)', o:YN},
+       {q:'5. 眼瞼の腫脹', o:YN},
+       {q:'6. 結膜浮腫(chemosis)', o:YN},
+       {q:'7. 涙丘・半月ひだの腫脹', o:YN},
+     ],
+     interpret:t=>{
+       const cls=t>=3?'alert':'ok', label=t>=3?'活動性(≥3)':'非活動性(<3)';
+       return {cls,label,detail:'合計 '+t+'/7 点。≥3で活動性。活動性の中等症以上では副腎皮質ステロイド等の免疫抑制療法や禁煙・セレン・RAI後管理などを検討します。'};
+     }},
+    {id:'bwps', cat:'内分泌', name:'BWPS 甲状腺クリーゼ', max:140,
+     note:'甲状腺クリーゼ(thyroid storm)の診断補助スコア(Burch-Wartofsky)。',
+     src:'出典: Burch & Wartofsky, Endocrinol Metab Clin North Am 1993。≥45で強く示唆、25–44は切迫、<25は可能性低い。',
+     items:[
+       {q:'体温', o:[[0,'<37.2℃'],[5,'37.2–37.7'],[10,'37.8–38.2'],[15,'38.3–38.8'],[20,'38.9–39.4'],[25,'39.5–39.9'],[30,'≥40.0']]},
+       {q:'中枢神経症状', o:[[0,'なし'],[10,'軽度(不穏)'],[20,'中等度(せん妄/精神病/強い傾眠)'],[30,'重度(痙攣/昏睡)']]},
+       {q:'消化器・肝症状', o:[[0,'なし'],[10,'中等度(下痢/嘔気嘔吐/腹痛)'],[20,'重度(原因不明の黄疸)']]},
+       {q:'頻脈(心拍数)', o:[[0,'<90'],[5,'90–109'],[10,'110–119'],[15,'120–129'],[20,'130–139'],[25,'≥140']]},
+       {q:'うっ血性心不全', o:[[0,'なし'],[5,'軽度(下腿浮腫)'],[10,'中等度(肺ラ音)'],[15,'重度(肺水腫)']]},
+       {q:'心房細動', o:[[0,'なし'],[10,'あり']]},
+       {q:'誘因(感染/手術/ヨード等)', o:[[0,'なし/不明'],[10,'あり']]},
+     ],
+     interpret:t=>{
+       let cls,label;
+       if(t>=45){cls='alert';label='クリーゼを強く示唆(≥45)';}
+       else if(t>=25){cls='warn';label='切迫クリーゼ(25–44)';}
+       else {cls='ok';label='可能性は低い(<25)';}
+       return {cls,label,detail:'合計 '+t+' 点。臨床診断の補助であり点数のみで判断しません。誘因の検索と、βブロッカー・抗甲状腺薬・ヨード・ステロイド等の治療を並行して検討します。'};
+     }},
+    {id:'chadsvasc', cat:'循環器', name:'CHA₂DS₂-VASc 脳梗塞リスク', max:9,
+     note:'非弁膜症性心房細動の脳梗塞・全身塞栓リスク。',
+     src:'出典: Lipら CHA₂DS₂-VASc(ESC採用)。男性≥2/女性≥3で経口抗凝固推奨、男性1/女性2は考慮。',
+     items:[
+       {q:'年齢', o:[[0,'<65'],[1,'65–74'],[2,'≥75']]},
+       {q:'C: うっ血性心不全/左室機能不全', o:YN},
+       {q:'H: 高血圧', o:YN},
+       {q:'D: 糖尿病', o:YN},
+       {q:'S: 脳卒中/TIA/血栓塞栓症の既往', o:[[0,'なし'],[2,'あり']]},
+       {q:'V: 血管疾患(MI/PAD/大動脈プラーク)', o:YN},
+       {q:'Sc: 性別が女性', o:[[0,'いいえ'],[1,'はい']]},
+     ],
+     interpret:(t,v)=>{
+       let cls,label;
+       if(t===0){cls='ok';label='低リスク(0)';}
+       else if(t===1){ if(v[6]===1){cls='ok';label='低リスク(女性因子のみ)';} else {cls='warn';label='中間リスク(1・背景で考慮)';} }
+       else {cls='alert';label='高リスク(≥2・抗凝固推奨)';}
+       return {cls,label,detail:'合計 '+t+' 点。男性≥2/女性≥3で経口抗凝固を推奨、男性1/女性2は考慮。女性因子のみ(1点)は低リスク扱い。出血リスク(HAS-BLED)と併せて総合判断を。'};
+     }},
+    {id:'hasbled', cat:'循環器', name:'HAS-BLED 出血リスク', max:9,
+     note:'抗凝固療法中の大出血リスク。是正可能因子の管理に用います。',
+     src:'出典: Pistersら HAS-BLED, Chest 2010。≥3で高出血リスク。抗凝固中止の単独根拠にはしない。',
+     items:[
+       {q:'H: 高血圧(収縮期>160)', o:YN},
+       {q:'A: 腎機能異常(透析/移植/Cr≥2.26mg/dL)', o:YN},
+       {q:'A: 肝機能異常(肝硬変orBil>2×+酵素>3×)', o:YN},
+       {q:'S: 脳卒中の既往', o:YN},
+       {q:'B: 出血既往・出血素因', o:YN},
+       {q:'L: INR不安定(TTR<60%)', o:YN},
+       {q:'E: 高齢(>65歳)', o:YN},
+       {q:'D: 薬剤(抗血小板薬/NSAIDs)', o:YN},
+       {q:'D: アルコール(≥8単位/週)', o:YN},
+     ],
+     interpret:t=>{
+       let cls,label;
+       if(t>=3){cls='alert';label='高出血リスク(≥3)';}
+       else if(t===2){cls='warn';label='中等度リスク(2)';}
+       else {cls='ok';label='低リスク(0–1)';}
+       return {cls,label,detail:'合計 '+t+' 点。≥3で高出血リスク。是正可能因子(コントロール不良の高血圧・抗血小板薬/NSAIDs・アルコール・INR不安定)の管理と定期的な再評価を。単独で抗凝固中止の根拠にはしません。'};
+     }},
+  ];
+  const scSel=$('sc_sel');
+  (function(){
+    let cur=null, grp=null;
+    SCORES.forEach(s=>{
+      if(s.cat!==cur){ cur=s.cat; grp=document.createElement('optgroup'); grp.label=s.cat; scSel.appendChild(grp); }
+      const o=document.createElement('option'); o.value=s.id; o.textContent=s.name; grp.appendChild(o);
+    });
+  })();
+  function scActive(){ return SCORES.find(x=>x.id===scSel.value)||SCORES[0]; }
+  function scRender(){
+    const s=scActive();
+    $('sc_desc').textContent=s.note||'';
+    $('sc_name').textContent=s.name;
+    $('sc_max').textContent='/ '+s.max+'点';
+    $('sc_src').textContent=s.src||'';
+    const box=$('sc_items'); box.innerHTML='';
+    s.items.forEach((it,i)=>{
+      const f=document.createElement('div'); f.className='field full sc_field';
+      const lb=document.createElement('label'); lb.textContent=it.q; f.appendChild(lb);
+      const wrap=document.createElement('div'); wrap.className='inp';
+      const sel=document.createElement('select'); sel.className='sc_i'; sel.dataset.i=i;
+      it.o.forEach((o,j)=>{ const op=document.createElement('option'); op.value=j; op.dataset.pts=o[0]; op.textContent=o[0]+' : '+o[1]; sel.appendChild(op); });
+      sel.addEventListener('change',scCalc);
+      wrap.appendChild(sel); f.appendChild(wrap); box.appendChild(f);
+    });
+    scCalc();
+  }
+  function scCalc(){
+    const s=scActive();
+    const vals=[...document.querySelectorAll('#sc_items .sc_i')].map(se=>Number(se.options[se.selectedIndex].dataset.pts));
+    const total=vals.reduce((a,b)=>a+b,0);
+    $('sc_total').textContent=String(total);
+    const r=s.interpret(total,vals);
+    setChip($('sc_chip'),r.cls,r.label);
+    $('sc_detail').textContent=r.detail;
+  }
+  scSel.addEventListener('change',scRender);
+  $('sc_reset').addEventListener('click',()=>{ document.querySelectorAll('#sc_items .sc_i').forEach(se=>se.selectedIndex=0); scCalc(); });
+  scRender();
 
   // ===== 大型テンキー(タッチ端末のみ・?np=1で強制ON/?np=0でOFF) =====
   // 数値入力(inputmode=decimal と 1日単位数)にフォーカスすると画面下部にテンキーを表示。
