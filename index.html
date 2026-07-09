@@ -137,6 +137,12 @@
   .supply .big b{font-family:var(--mono);font-size:20px;color:#F4FAF8;font-weight:600}
   .supply .big .un{font-size:11px;color:#7E948C;margin-left:3px}
   .supply .ssub{font-size:11px;color:#8EA29A;font-family:var(--mono)}
+  .ro-cols{display:grid;grid-template-columns:1fr}
+  @media (min-width:680px){
+    .ro-cols{grid-template-columns:1fr 1fr;gap:0 28px;align-items:start}
+    .ro-cols .ro-col:last-child{border-left:1px solid rgba(255,255,255,.09);padding-left:28px}
+    .ro-cols .colsep{display:none}
+  }
   .nsub{font-size:12.5px;font-weight:700;color:var(--accent);margin:20px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
   .nsub .u{font-weight:500;color:var(--muted)}
   .corrbtns{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
@@ -654,27 +660,33 @@
     <button class="addbtn" id="i_add">＋ インスリンを追加</button>
 
     <div class="readout">
-      <div class="ro-row"><span class="ro-label">インスリン合計</span></div>
-      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="i_total">—</span><span class="ro-unit">本</span></div>
-      <div class="ro-div"></div>
-      <div class="breakdown" id="i_breakdown"></div>
-      <div class="ro-div"></div>
-      <div class="ro-label" style="margin-bottom:6px">付属物品(処方数=不足のない最小量)</div>
-      <div class="supply">
-        <div class="sname">マイクロファイン<span>ペン針・14本単位</span></div>
-        <div class="sval"><span class="big"><b id="i_needles">—</b><span class="un">本</span></span><span class="ssub" id="i_needles_sub"></span></div>
-      </div>
-      <div class="supply">
-        <div class="sname">SMBG穿刺針<span>30本単位</span></div>
-        <div class="sval"><span class="big"><b id="i_lancet">—</b><span class="un">本</span></span><span class="ssub" id="i_lancet_sub"></span></div>
-      </div>
-      <div class="supply">
-        <div class="sname">SMBGセンサ<span>30枚単位</span></div>
-        <div class="sval"><span class="big"><b id="i_sensor">—</b><span class="un">枚</span></span><span class="ssub" id="i_sensor_sub"></span></div>
-      </div>
-      <div class="supply" style="border-bottom:none">
-        <div class="sname">消毒綿<span>注射+穿刺分・30枚単位</span></div>
-        <div class="sval"><span class="big"><b id="i_swab">—</b><span class="un">枚</span></span><span class="ssub" id="i_swab_sub"></span></div>
+      <div class="ro-cols">
+        <div class="ro-col">
+          <div class="ro-row"><span class="ro-label">インスリン合計</span></div>
+          <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="i_total">—</span><span class="ro-unit">本</span></div>
+          <div class="ro-div"></div>
+          <div class="breakdown" id="i_breakdown"></div>
+        </div>
+        <div class="ro-col">
+          <div class="ro-div colsep"></div>
+          <div class="ro-label" style="margin-bottom:6px">付属物品(処方数=不足のない最小量)</div>
+          <div class="supply">
+            <div class="sname">マイクロファイン<span>ペン針・14本単位</span></div>
+            <div class="sval"><span class="big"><b id="i_needles">—</b><span class="un">本</span></span><span class="ssub" id="i_needles_sub"></span></div>
+          </div>
+          <div class="supply">
+            <div class="sname">SMBG穿刺針<span>30本単位</span></div>
+            <div class="sval"><span class="big"><b id="i_lancet">—</b><span class="un">本</span></span><span class="ssub" id="i_lancet_sub"></span></div>
+          </div>
+          <div class="supply">
+            <div class="sname">SMBGセンサ<span>30枚単位</span></div>
+            <div class="sval"><span class="big"><b id="i_sensor">—</b><span class="un">枚</span></span><span class="ssub" id="i_sensor_sub"></span></div>
+          </div>
+          <div class="supply" style="border-bottom:none">
+            <div class="sname">消毒綿<span>注射+穿刺分・30枚単位</span></div>
+            <div class="sval"><span class="big"><b id="i_swab">—</b><span class="un">枚</span></span><span class="ssub" id="i_swab_sub"></span></div>
+          </div>
+        </div>
       </div>
       <div class="interp" id="i_interp">処方数は各規格の倍数に切り上げた「不足なく出せる最小量」です。マイクロファインは注射回数×日数、穿刺針・センサは測定回数×日数、消毒綿は(注射+穿刺)回数×日数を30枚単位に切り上げ。予備が必要なら1規格上乗せしてください。</div>
     </div>
@@ -1868,7 +1880,7 @@
 
   function setSupply(id,need,pack,unit){
     const bEl=$(id), subEl=$(id+'_sub');
-    if(need>0){ const packs=Math.ceil(need/pack), rx=packs*pack; bEl.textContent=fmt(rx,0); if(subEl) subEl.textContent=`必要 ${fmt(need,0)}${unit} ・ ${pack}${unit}×${packs}`; }
+    if(need>0){ const packs=Math.ceil(need/pack), rx=packs*pack; bEl.textContent=fmt(rx,0); if(subEl) subEl.innerHTML=`<span style="white-space:nowrap">必要 ${fmt(need,0)}${unit}</span> ・ <span style="white-space:nowrap">${pack}${unit}×${packs}</span>`; }
     else { bEl.textContent='—'; if(subEl) subEl.textContent=''; }
   }
   function calcIns(){
