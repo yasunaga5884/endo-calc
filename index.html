@@ -137,11 +137,18 @@
   .supply .big b{font-family:var(--mono);font-size:20px;color:#F4FAF8;font-weight:600}
   .supply .big .un{font-size:11px;color:#7E948C;margin-left:3px}
   .supply .ssub{font-size:11px;color:#8EA29A;font-family:var(--mono)}
+  .readout{container-type:inline-size}
   .ro-cols{display:grid;grid-template-columns:1fr}
-  @media (min-width:680px){
+  @container (min-width:520px){
     .ro-cols{grid-template-columns:1fr 1fr;gap:0 28px;align-items:start}
     .ro-cols .ro-col:last-child{border-left:1px solid rgba(255,255,255,.09);padding-left:28px}
     .ro-cols .colsep{display:none}
+  }
+  /* PC幅ではインスリンタブのみ横幅を広げ、入力(左)と結果(右)を2カラム表示 */
+  @media (min-width:1080px){
+    .wrap:has(#ins.active){max-width:1140px}
+    #ins .ins-cols{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:0 26px;align-items:start}
+    #ins .ins-results .readout{margin-top:0}
   }
   .nsub{font-size:12.5px;font-weight:700;color:var(--accent);margin:20px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
   .nsub .u{font-weight:500;color:var(--muted)}
@@ -639,6 +646,8 @@
     <div class="panelhead"><h2>インスリン処方・物品数計算</h2><button type="button" class="clearbtn" id="i_clear">クリア</button></div>
     <p class="note">投与期間の週を選ぶと、種類別の必要本数と、マイクロファイン・SMBG穿刺針・センサをまとめて算出します。1日単位数はスペース区切りで自動合計し、注射回数も入力の個数から自動設定(例:3 3 3 → 9U・3回)。</p>
 
+    <div class="ins-cols">
+    <div class="ins-inputs">
     <div class="periodrow" style="margin-top:0;margin-bottom:6px">
       <div class="field" style="flex:0 0 190px"><label>開始日 <span class="u">既定 本日</span></label><div class="inp"><input type="date" id="i_start"></div></div>
     </div>
@@ -658,7 +667,9 @@
 
     <div id="i_lines"></div>
     <button class="addbtn" id="i_add">＋ インスリンを追加</button>
+    </div>
 
+    <div class="ins-results">
     <div class="readout">
       <div class="ro-cols">
         <div class="ro-col">
@@ -691,6 +702,8 @@
       <div class="interp" id="i_interp">処方数は各規格の倍数に切り上げた「不足なく出せる最小量」です。マイクロファインは注射回数×日数、穿刺針・センサは測定回数×日数、消毒綿は(注射+穿刺)回数×日数を30枚単位に切り上げ。予備が必要なら1規格上乗せしてください。</div>
     </div>
     <div class="hint">必要本数=切り上げ。単位数/本:一般的なペン・カートリッジ=300、U300製剤(1.5mL)=450、バイアル=1000。CGM併用時はSMBG測定回数を実測分に合わせてください。</div>
+    </div>
+    </div>
   </section>
 
   <footer>
