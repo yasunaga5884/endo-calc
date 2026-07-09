@@ -631,7 +631,7 @@
   <!-- INSULIN Rx -->
   <section class="panel" id="ins" role="tabpanel">
     <div class="panelhead"><h2>インスリン処方・物品数計算</h2><button type="button" class="clearbtn" id="i_clear">クリア</button></div>
-    <p class="note">投与期間の週を選ぶと、種類別の必要本数と、マイクロファイン・SMBG穿刺針・センサをまとめて算出します。1日単位数はスペース区切りで自動合計(例:3 3 3 → 9)。</p>
+    <p class="note">投与期間の週を選ぶと、種類別の必要本数と、マイクロファイン・SMBG穿刺針・センサをまとめて算出します。1日単位数はスペース区切りで自動合計し、注射回数も入力の個数から自動設定(例:3 3 3 → 9U・3回)。</p>
 
     <div class="periodrow" style="margin-top:0;margin-bottom:6px">
       <div class="field" style="flex:0 0 190px"><label>開始日 <span class="u">既定 本日</span></label><div class="inp"><input type="date" id="i_start"></div></div>
@@ -673,10 +673,10 @@
         <div class="sval"><span class="big"><b id="i_sensor">—</b><span class="un">枚</span></span><span class="ssub" id="i_sensor_sub"></span></div>
       </div>
       <div class="supply" style="border-bottom:none">
-        <div class="sname">消毒綿<span>注射+穿刺の処置回数分</span></div>
-        <div class="sval"><span class="big"><b id="i_swab">—</b><span class="un">枚</span></span></div>
+        <div class="sname">消毒綿<span>注射+穿刺分・30枚単位</span></div>
+        <div class="sval"><span class="big"><b id="i_swab">—</b><span class="un">枚</span></span><span class="ssub" id="i_swab_sub"></span></div>
       </div>
-      <div class="interp" id="i_interp">処方数は各規格の倍数に切り上げた「不足なく出せる最小量」です。マイクロファインは注射回数×日数、穿刺針・センサは測定回数×日数、消毒綿は(注射+穿刺)回数×日数で算出。予備が必要なら1規格上乗せしてください。</div>
+      <div class="interp" id="i_interp">処方数は各規格の倍数に切り上げた「不足なく出せる最小量」です。マイクロファインは注射回数×日数、穿刺針・センサは測定回数×日数、消毒綿は(注射+穿刺)回数×日数を30枚単位に切り上げ。予備が必要なら1規格上乗せしてください。</div>
     </div>
     <div class="hint">必要本数=切り上げ。単位数/本:一般的なペン・カートリッジ=300、U300製剤(1.5mL)=450、バイアル=1000。CGM併用時はSMBG測定回数を実測分に合わせてください。</div>
   </section>
@@ -1796,9 +1796,9 @@
   visit.addEventListener('input',()=>{ state.mode=visit.value?'date':'week'; syncPeriod(); calcIns(); });
   updateWeekLabels(); updateVisitMin();
 
-  // measurement select 0-8 (default 4)
+  // measurement select 0-8 (default 2)
   const measSel=$('i_meas');
-  for(let m=0;m<=8;m++){ const o=document.createElement('option'); o.value=m; o.textContent=m+' 回'; if(m===4)o.selected=true; measSel.appendChild(o); }
+  for(let m=0;m<=8;m++){ const o=document.createElement('option'); o.value=m; o.textContent=m+' 回'; if(m===2)o.selected=true; measSel.appendChild(o); }
   measSel.addEventListener('change',calcIns);
 
   function effDays(){
@@ -1838,7 +1838,7 @@
           </div>
         </div>
         <div class="field"><label>1日単位数 <span class="u">スペース区切り可</span></label><div class="inp"><input class="i_units" placeholder="例 12 または 3 3 3"><span class="unit">U/日</span></div><span class="sumhint" data-sumhint></span></div>
-        <div class="field"><label>1日注射回数</label><div class="inp"><select class="i_inj">${injOpts}</select></div></div>
+        <div class="field"><label>1日注射回数 <span class="u">入力から自動・変更可</span></label><div class="inp"><select class="i_inj">${injOpts}</select></div></div>
         <div class="field full"><label>単位数/本(規格)</label><div class="inp"><select class="i_cap">
           <option value="300">300単位(ペン・カートリッジ)</option>
           <option value="450">450単位(U300・1.5mL)</option>
@@ -1846,10 +1846,19 @@
         </select></div></div>
         <div class="res"><div class="rescol"><span class="sub" data-sub>—</span><span class="rem" data-rem></span></div><span class="n" data-n>— 本</span></div>
       </div>`;
+    const unitsInp=wrap.querySelector('.i_units'), injSel=wrap.querySelector('.i_inj');
+    // 注射回数は単位数の入力個数から自動設定(例:3 3 3 → 3回)。手動で変更したらそれを優先。
+    function autoInj(){
+      if(wrap.dataset.injManual==='1') return;
+      const ps=parseSum(unitsInp.value);
+      injSel.value = ps.count>=1 ? String(Math.min(ps.count,5)) : INJ_DEFAULT[wrap.dataset.type];
+    }
+    unitsInp.addEventListener('input',autoInj);
+    injSel.addEventListener('change',()=>{ wrap.dataset.injManual='1'; });
     wrap.querySelectorAll('.i_type button').forEach(b=>b.addEventListener('click',()=>{
       const t=b.dataset.t; wrap.dataset.type=t;
       wrap.querySelectorAll('.i_type button').forEach(x=>x.setAttribute('aria-pressed', x.dataset.t===t?'true':'false'));
-      wrap.querySelector('.i_inj').value=INJ_DEFAULT[t];
+      autoInj();
       calcIns();
     }));
     wrap.querySelector('.rm').addEventListener('click',()=>{ wrap.remove(); calcIns(); });
@@ -1867,7 +1876,7 @@
     const usePrime=$('i_prime').checked;
     const primeAmt=usePrime?(num($('i_primeamt').value)||0):0;
     $('i_prime_wrap').style.opacity=usePrime?'1':'.4';
-    const typeTotals={'持効型':0,'超速効型':0};
+    const typeTotals={'持効型':0,'超速効型':0}, typeTight={'持効型':0,'超速効型':0};
     let totalPens=0,needles=0,anyPen=false;
     document.querySelectorAll('#i_lines .iline').forEach(row=>{
       const type=row.dataset.type;
@@ -1888,6 +1897,7 @@
         const leftover=pens*cap-totalUnits;
         if(dailyUse>0){
           const bufDays=leftover/dailyUse, tight=bufDays<3;
+          if(tight) typeTight[type]++;
           const bufTxt=bufDays<1?'1日未満':`約${fmt(bufDays,0)}日分`;
           remEl.textContent=`余り ${fmt(leftover,0)}U(${bufTxt})${tight?' ・予備1本推奨':''}`;
           remEl.className='rem'+(tight?' tight':'');
@@ -1896,9 +1906,20 @@
     });
     // breakdown by type
     const bd=$('i_breakdown'); bd.innerHTML='';
+    let tightTotal=0;
     ['持効型','超速効型'].forEach(t=>{
-      if(typeTotals[t]>0){ const d=document.createElement('div'); d.className='bd'; d.innerHTML=`<span>${t}</span><b>${typeTotals[t]} 本</b>`; bd.appendChild(d); }
+      if(typeTotals[t]>0){
+        const d=document.createElement('div'); d.className='bd';
+        d.innerHTML=`<span>${t}${typeTight[t]>0?' <b style="color:var(--warn)">予備+'+typeTight[t]+'本推奨</b>':''}</span><b>${typeTotals[t]} 本</b>`;
+        bd.appendChild(d);
+        tightTotal+=typeTight[t];
+      }
     });
+    if(tightTotal>0){
+      const d=document.createElement('div'); d.className='bd';
+      d.innerHTML=`<span style="color:var(--warn)">余りが3日分未満の製剤あり(予備込み)</span><b style="color:var(--warn)">${totalPens+tightTotal} 本 推奨</b>`;
+      bd.appendChild(d);
+    }
     if(!anyPen) bd.innerHTML='<div class="bd" style="color:#7E948C;border:none"><span>1日単位数を入力してください</span></div>';
     $('i_total').textContent=anyPen?fmt(totalPens,0):"—";
     // supplies with pack rounding
@@ -1908,7 +1929,7 @@
     setSupply('i_needles',needles,14,'本');
     setSupply('i_lancet',smbg,30,'本');
     setSupply('i_sensor',smbg,30,'枚');
-    $('i_swab').textContent=(swab>0)?fmt(swab,0):"—";
+    setSupply('i_swab',swab,30,'枚');
   }
   $('i_add').addEventListener('click',()=>{ lineTemplate('超速効型'); calcIns(); });
   ['i_prime','i_primeamt'].forEach(id=>$(id).addEventListener('input',calcIns));
@@ -1916,7 +1937,7 @@
     linesBox.innerHTML='';
     lineTemplate('持効型'); lineTemplate('超速効型');
     startInp.value=isoLocal(today); visit.value='';
-    state.mode='week'; state.weeks=8; measSel.value='4';
+    state.mode='week'; state.weeks=8; measSel.value='2';
     $('i_prime').checked=true; $('i_primeamt').value='2';
     updateWeekLabels(); updateVisitMin(); syncPeriod(); calcIns();
   }
