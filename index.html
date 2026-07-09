@@ -171,6 +171,21 @@
   body.np-open{padding-bottom:350px}
   footer{margin-top:22px;font-size:11.5px;color:var(--muted);line-height:1.6;border-top:1px solid var(--line);padding-top:14px}
   footer b{color:var(--ink)}
+  /* リンク集 */
+  .lk_group{margin:0 0 18px}
+  .lk_group h3{font-size:13px;font-weight:700;color:var(--accent);margin:0 0 4px;letter-spacing:.02em}
+  .lk_group .lk_org{font-size:11.5px;color:var(--muted);margin:0 0 9px}
+  .lk_list{display:flex;flex-direction:column;gap:8px}
+  .lk_item{display:flex;align-items:flex-start;gap:11px;border:1px solid var(--line);border-radius:11px;padding:12px 14px;text-decoration:none;color:inherit;background:var(--surface);transition:border-color .15s,background .15s}
+  .lk_item:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .lk_item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .lk_ic{flex:none;width:20px;height:20px;margin-top:1px;color:var(--muted)}
+  .lk_tx{min-width:0;flex:1}
+  .lk_tt{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.35}
+  .lk_tt .lk_yr{font-weight:500;color:var(--muted);font-size:12px}
+  .lk_ds{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .lk_host{font-size:11px;color:var(--accent);font-family:var(--mono);margin-top:3px;word-break:break-all}
+  .lk_arrow{flex:none;align-self:center;color:var(--muted);font-size:15px}
 </style>
 </head>
 <body>
@@ -194,15 +209,17 @@
     <button class="tab" role="tab" aria-selected="true"  data-tab="carb">カーボカウント</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ins">インスリン処方</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="bmi">BMI・栄養</button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="conv">GA・換算</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="renal">eGFR/CCr</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="abx">抗菌薬用量</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="na">Na補正</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ag">AG・ケトン</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="pf">P/F比</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="osmo">浸透圧比</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="load">負荷試験</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="ref">基準値</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="steroid">ステロイド</button>
     <button class="tab" role="tab" aria-selected="false" data-tab="score">スコア</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="links">ガイドライン</button>
   </nav>
 
   <!-- CARB -->
@@ -378,6 +395,72 @@
     <div class="hint"><b>推算の前提と注意:</b> AG=Na−Cl−HCO₃(正常12±2、K含む式では約16)。補正AG=AG+2.5×(4.0−Alb)(低アルブミンでAGは過小評価。基準Alb・係数は出典で2.3〜2.5と幅あり)。ΔAG=補正AG−正常AG。<b>ケトン体は「ΔAGの乳酸で説明できない分がすべてケトン体由来」という仮定の粗い推算</b>で、その他の不揮発性酸(腎不全・中毒・サリチル酸等)があると過大評価します。AGが正常でもAG開大性アシドーシスは否定できません。確定には血中/尿中ケトン体・血液ガスの実測と臨床像を用いてください。(式の出典: naikainokakekomidera.com「血ガスの読み方②」)</div>
   </section>
 
+  <!-- P/F RATIO (PaO2/FiO2) -->
+  <section class="panel" id="pf" role="tabpanel">
+    <div class="panelhead"><h2>P/F比(PaO₂/FiO₂)</h2><button type="button" class="clearbtn" id="pf_clear">クリア</button></div>
+    <p class="note">動脈血のPaO₂とFiO₂から <b>P/F比 = PaO₂ ÷ FiO₂(分数)</b> を計算し、ARDS(Berlin定義)の重症度の目安を表示します。FiO₂は直接入力(人工呼吸器・ネーザルハイフロー等)か、酸素デバイスと流量からの推定を選べます。</p>
+    <div class="grid">
+      <div class="field"><label>PaO₂ <span class="u">動脈血ガス</span></label><div class="inp"><input id="pf_pao2" inputmode="decimal" placeholder="例 80"><span class="unit">mmHg</span></div></div>
+      <div class="field full"><label>FiO₂の指定方法</label><div class="seg" id="pf_mode"><button data-v="direct" aria-pressed="true">直接入力(%)</button><button data-v="device" aria-pressed="false">デバイスから推定</button></div></div>
+    </div>
+    <div class="grid" id="pf_direct_wrap">
+      <div class="field"><label>FiO₂ <span class="u">室内気=21</span></label><div class="inp"><input id="pf_fio2" inputmode="decimal" placeholder="例 40"><span class="unit">%</span></div></div>
+    </div>
+    <div class="grid" id="pf_device_wrap" style="display:none">
+      <div class="field full"><label>酸素デバイス</label><div class="inp"><select id="pf_device"></select></div></div>
+      <div class="field"><label>酸素流量</label><div class="inp"><input id="pf_flow" inputmode="decimal" placeholder="例 3"><span class="unit">L/min</span></div></div>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">P/F比(PaO₂/FiO₂)</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="pf_ratio">—</span></div>
+      <div class="chip none" id="pf_chip"><span class="dot"></span><span id="pf_chip_t">入力待ち</span></div>
+      <div class="ro-sub" style="margin-top:14px">
+        <div>使用したFiO₂ <b id="pf_usedfio2">—</b> %</div>
+        <div>PaO₂ <b id="pf_paval">—</b> mmHg</div>
+        <div id="pf_estrow" style="display:none">FiO₂推定の根拠 <b id="pf_est">—</b></div>
+      </div>
+      <div class="interp" id="pf_interp">PaO₂とFiO₂を入力するとP/F比を計算します。</div>
+    </div>
+    <div class="hint"><b>ARDS重症度(Berlin定義、PEEP/CPAP ≥5 cmH₂O下):</b> 軽症 200<P/F≤300 ／ 中等症 100<P/F≤200 ／ 重症 P/F≤100。<b>ARDS診断にはP/F比に加え</b>①1週間以内の急性発症、②胸部画像で両側性陰影、③心不全・溢水だけで説明できない、が必要です。P/F比は測定時のFiO₂・PEEPに依存し、酸素デバイスからのFiO₂は<b>あくまで推定値</b>(鼻カニューラ ≒ 20+4×流量%、簡易マスク 5–6L≒40/6–7L≒50/7–8L≒60%、リザーバーマスク ≒ 10×流量%[6L以上・上限約90])。高地では大気圧補正(×760/実測大気圧)を要します。最終判断は臨床像・血液ガス全体で行ってください。</div>
+  </section>
+
+  <!-- OSMOLARITY RATIO AFTER MIXING -->
+  <section class="panel" id="osmo" role="tabpanel">
+    <div class="panelhead"><h2>混注後の浸透圧比</h2><button type="button" class="clearbtn" id="o_clear">クリア</button></div>
+    <p class="note">補液に 10%NaCl・50%ブドウ糖 などを混注したときの<b>混注後の浸透圧(mOsm/L)と浸透圧比</b>を計算します。浸透圧比 = 混注後浸透圧 ÷ 血漿浸透圧(286)。末梢静脈投与は<b>浸透圧比 約3以下</b>が目安です。理論値による計算で、実測の製剤浸透圧とは差が出ることがあります。</p>
+    <div class="grid">
+      <div class="field full"><label>補液(ベース)プリセット</label><div class="inp"><select id="o_preset"></select></div></div>
+      <div class="field"><label>ベース量</label><div class="inp"><input id="o_vol" inputmode="decimal" placeholder="例 500"><span class="unit">mL</span></div></div>
+      <div class="field"><label>ベース浸透圧 <span class="u">代表値・可変</span></label><div class="inp"><input id="o_osm" inputmode="decimal" placeholder="例 278"><span class="unit">mOsm/L</span></div></div>
+      <div class="field"><label>ベースNa</label><div class="inp"><input id="o_na" inputmode="decimal" placeholder="例 0"><span class="unit">mEq/L</span></div></div>
+      <div class="field"><label>ベースのブドウ糖 <span class="u">濃度</span></label><div class="inp"><input id="o_glu" inputmode="decimal" placeholder="例 5"><span class="unit">%</span></div></div>
+    </div>
+    <div class="nsub">混注する薬剤</div>
+    <div class="grid">
+      <div class="field"><label>10%NaCl <span class="u">Na 1.71mEq/mL</span></label><div class="inp"><input id="o_nacl" inputmode="decimal" placeholder="0"><span class="unit">mL</span></div></div>
+      <div class="field"><label>50%ブドウ糖 <span class="u">糖 0.5g/mL</span></label><div class="inp"><input id="o_gl50" inputmode="decimal" placeholder="0"><span class="unit">mL</span></div></div>
+      <div class="field"><label>その他添加 <span class="u">任意</span></label><div class="inp"><input id="o_oth_v" inputmode="decimal" placeholder="0"><span class="unit">mL</span></div></div>
+      <div class="field"><label>その他の浸透圧 <span class="u">その他添加用</span></label><div class="inp"><input id="o_oth_o" inputmode="decimal" placeholder="例 4.0"><span class="unit">mOsm/mL</span></div></div>
+    </div>
+    <div class="readout">
+      <div class="ro-row"><span class="ro-label">混注後の浸透圧比</span></div>
+      <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="o_ratio">—</span><span class="ro-unit">(血漿=1)</span></div>
+      <div class="chip none" id="o_chip"><span class="dot"></span><span id="o_chip_t">入力待ち</span></div>
+      <div class="ro-sub" style="margin-top:14px">
+        <div>混注後の浸透圧 <b id="o_result">—</b> mOsm/L</div>
+        <div>混注後の総量 <b id="o_totv">—</b> mL</div>
+      </div>
+      <div class="ro-div"></div>
+      <div class="ro-sub">
+        <div>混注後のNa濃度 <b id="o_fna">—</b> mEq/L</div>
+        <div>混注後のブドウ糖濃度 <b id="o_fglu">—</b> %</div>
+        <div>添加Na量 <b id="o_addna">—</b> mEq ／ 添加糖 <b id="o_addg">—</b> g</div>
+      </div>
+      <div class="interp" id="o_interp">ベース(量・浸透圧)と混注量を入力すると計算します。プリセットを選ぶと代表値が入ります。</div>
+    </div>
+    <div class="hint"><b>計算式:</b> 混注後浸透圧 = 総mOsm ÷ 総量(L)。総mOsm = ベース量×ベース浸透圧 + 各添加量×添加浸透圧。浸透圧比 = 混注後浸透圧 ÷ 286。<b>添加の浸透圧(理論値):</b> 10%NaCl ≒ 3.42 mOsm/mL(Na 1.71 mEq/mL)、50%ブドウ糖 ≒ 2.78 mOsm/mL(糖 0.5 g/mL)。ベース浸透圧・Na・糖はプリセットの代表値で、製剤・ロットで異なるため添付文書でご確認ください。<b>末梢静脈からの投与は浸透圧比 約3以下・ブドウ糖濃度 約12.5%以下が目安</b>で、これを超える場合は中心静脈路や希釈を検討してください。理論計算のため、高濃度ブドウ糖などでは実測浸透圧より低めに出ることがあります。最終判断は臨床で行ってください。</div>
+  </section>
+
   <!-- ANTIBIOTIC RENAL DOSING -->
   <section class="panel" id="abx" role="tabpanel">
     <h2>抗菌薬 腎機能別投与量</h2>
@@ -431,25 +514,6 @@
     <div class="hint">出典(代表値): 大阪医科薬科大学病院 内分泌検査案内、LSIメディエンス／SRL総合検査案内、原発性アルドステロン症診療ガイドライン2021(CLEIA法)。基準値は測定キット・施設・採血条件(体位・時刻・薬剤)で変動します。診断は必ず自施設の基準値・臨床像・必要に応じ負荷試験と併せて行ってください。</div>
   </section>
 
-  <!-- CONVERSIONS (GA / ketone) -->
-  <section class="panel" id="conv" role="tabpanel">
-    <h2>グリコアルブミン・換算</h2>
-    <p class="note">GAとHbA1c(NGSP)の相互換算。実用式 HbA1c(NGSP) ≒ GA ÷ 3(通常比は約3、病態で2〜3に変動)。GAは過去約2週間の平均血糖を反映します。</p>
-    <div class="grid">
-      <div class="field"><label>グリコアルブミン GA</label><div class="inp"><input id="v_ga" inputmode="decimal" placeholder="例 18"><span class="unit">%</span></div></div>
-      <div class="field"><label>HbA1c(NGSP)</label><div class="inp"><input id="v_a1c" inputmode="decimal" placeholder="例 6.5"><span class="unit">%</span></div></div>
-    </div>
-    <div class="readout">
-      <div class="ro-row"><span class="ro-label">GA → 推定HbA1c(NGSP)</span></div>
-      <div class="ro-second" style="margin-top:8px"><span class="v" id="v_ga2a1c">—</span><span class="ro-unit">%</span></div>
-      <div class="ro-div"></div>
-      <div class="ro-row"><span class="ro-label">HbA1c → 推定GA</span></div>
-      <div class="ro-second" style="margin-top:8px"><span class="v" id="v_a1c2ga">—</span><span class="ro-unit">%</span></div>
-      <div class="interp" id="v_interp">GA または HbA1c を入力すると相互換算します。</div>
-    </div>
-    <div class="hint">GA基準値は概ね11〜16%。GA/HbA1c比は病態で変動し、貧血・肝硬変・甲状腺機能亢進・ステロイド投与では比が上昇、ネフローゼ・甲状腺機能低下・肥満では低下する傾向があります。血糖の急な変化時はGAが先に動きます。正確な換算にはDeming回帰が必要で、本式は簡易近似です(出典:日本の臨床データ・GA÷3)。</div>
-  </section>
-
   <!-- STEROID EQUIVALENCE -->
   <section class="panel" id="steroid" role="tabpanel">
     <h2>ステロイド力価換算</h2>
@@ -485,6 +549,14 @@
       <div class="interp" id="sc_detail"></div>
     </div>
     <div class="hint" id="sc_src"></div>
+  </section>
+
+  <!-- GUIDELINE LINKS -->
+  <section class="panel" id="links" role="tabpanel">
+    <h2>ガイドライン・リンク集</h2>
+    <p class="note">内分泌・糖尿病・関連領域の主要な学会ガイドライン等の公式ページへのリンク集です。多くは学会サイトやJ-STAGE・Mindsで全文/要約が公開されています。改訂・URL変更がありうるため、実際の版・内容は必ずリンク先でご確認ください(タップで別タブが開きます)。</p>
+    <div id="lk_wrap"></div>
+    <div class="hint"><b>注意:</b> 本リンク集は参照の便宜のためのもので、各ガイドラインの内容・最新性・可用性を保証するものではありません。リンク先は外部サイトで、URLや掲載版は予告なく変わることがあります。診療判断は最新の一次資料に基づいて行ってください。</div>
   </section>
 
   <!-- BMI / NUTRITION -->
@@ -799,18 +871,6 @@
   }
   ['e_cr','e_age','e_wt','e_alb'].forEach(id=>$(id).addEventListener('input',renal));
 
-  // ===== CONVERSIONS: GA <-> HbA1c =====
-  // 実用式 HbA1c(NGSP) ≒ GA/3 (日本の臨床データ)。GAは約2週間の平均血糖を反映。
-  function convCalc(){
-    const ga=num($('v_ga').value), a1c=num($('v_a1c').value);
-    $('v_ga2a1c').textContent = (ga!==null&&ga>0)?fmt(ga/3,1):'—';
-    $('v_a1c2ga').textContent = (a1c!==null&&a1c>0)?fmt(a1c*3,1):'—';
-    let msg='GA または HbA1c を入力すると相互換算します。';
-    if((ga!==null&&ga>0)||(a1c!==null&&a1c>0)) msg='比は通常約3。急な血糖変動時や病態(貧血・肝硬変・甲状腺・ネフローゼ等)では乖離するため参考値として解釈してください。';
-    $('v_interp').textContent=msg;
-  }
-  ['v_ga','v_a1c'].forEach(id=>$(id).addEventListener('input',convCalc));
-
   // ===== STEROID EQUIVALENCE =====
   // 抗炎症(グルココルチコイド)等価用量(mg)。値=プレドニゾロン5mgに対する等価mg。
   const STEROIDS=[
@@ -1004,6 +1064,7 @@
     {n:'セフェピム (CFPM)', bands:[[50,'2 g','8〜12時間毎'],[10,'2 g','12〜24時間毎'],[0,'1 g','24時間毎']], hd:'1〜2 g 週3回(透析後)', note:'セフェピム脳症に注意(特に腎障害時)'},
     {n:'タゾバクタム/ピペラシリン (TAZ/PIPC)', bands:[[50,'4.5 g','6〜8時間毎'],[10,'4.5 g','8時間毎'],[0,'4.5 g','12時間毎']], hd:'4.5 g 12時間毎(透析後)', note:''},
     {n:'ピペラシリン (PIPC)', bands:[[50,'2〜4 g','6〜8時間毎'],[10,'2〜4 g','8〜12時間毎'],[0,'2 g','12〜24時間毎']], hd:'2 g 12〜24時間毎(透析後)', note:''},
+    {n:'アンピシリン/スルバクタム (ABPC/SBT)', bands:[[30,'3 g','6〜8時間毎'],[15,'3 g','12時間毎'],[0,'3 g','24時間毎']], hd:'3 g 24時間毎(透析後)', note:'ユナシン-S/スルバシリン。1.5〜3 g/回(3 g=ABPC 2 g+SBT 1 g)'},
     {n:'メロペネム (MEPM)', bands:[[50,'1 g','8時間毎'],[10,'0.5〜1 g','12時間毎'],[0,'0.5 g','24時間毎']], hd:'0.5 g 24時間毎(透析後)', note:'細菌性髄膜炎は増量(2 g 8時間毎)'},
     {n:'レボフロキサシン (LVFX)', bands:[[50,'500 mg','24時間毎'],[20,'初日500→翌日以降250 mg','24時間毎'],[0,'初日500→3日目以降250 mg','48時間毎']], hd:'初日500→3日目以降250 mg 48時間毎', note:''},
     {n:'ST合剤 (一般感染症)', bands:[[50,'2 錠','12時間毎'],[10,'1〜2 錠','12時間毎'],[0,'2 錠','24時間毎']], hd:'2 錠 24時間毎(透析後)', note:'ニューモシスチス肺炎(PCP)治療は体重換算で別基準'},
@@ -1487,6 +1548,219 @@
   }
   ['ag_na','ag_cl','ag_hco3','ag_alb','ag_lac','ag_k'].forEach(id=>$(id).addEventListener('input',agCalc));
   agCalc();
+
+  // ===== 混注後の浸透圧比 =====
+  // 添加の浸透圧(理論値): 10%NaCl=100mg/mL → Na 100/58.44=1.71mmol/mL, 2粒子で3.42mOsm/mL。
+  // 50%ブドウ糖=0.5g/mL → 0.5/180.16=2.78mmol/mL=2.78mOsm/mL。浸透圧比=浸透圧/286(血漿)。
+  const O_NACL_OSM=3.42, O_NACL_NA=1.71, O_GL50_OSM=2.78, O_PLASMA=286;
+  // プリセット代表値 {浸透圧mOsm/L, Na mEq/L, ブドウ糖%}。製剤で異なる代表値。
+  const O_PRESETS=[
+    {n:'—(手入力)', o:'', na:'', g:''},
+    {n:'生理食塩液 0.9%', o:308, na:154, g:0},
+    {n:'5%ブドウ糖液', o:278, na:0, g:5},
+    {n:'10%ブドウ糖液', o:555, na:0, g:10},
+    {n:'乳酸リンゲル液(ラクテック等)', o:273, na:130, g:0},
+    {n:'酢酸リンゲル液(ヴィーンF等)', o:294, na:130, g:0},
+    {n:'1号液・開始液(ソルデム1等)', o:308, na:90, g:2.6},
+    {n:'3号液・維持液(ソルデム3A等)', o:350, na:35, g:4.3},
+    {n:'ヴィーンD・ソルアセトD(糖加酢酸リンゲル)', o:560, na:130, g:5},
+  ];
+  (function(){ const s=$('o_preset'); O_PRESETS.forEach((p,i)=>{ const op=document.createElement('option'); op.value=String(i); op.textContent=p.n; s.appendChild(op); }); })();
+  $('o_preset').addEventListener('change',()=>{
+    const p=O_PRESETS[+$('o_preset').value||0];
+    if(p.o!==''){ $('o_osm').value=p.o; $('o_na').value=p.na; $('o_glu').value=p.g; }
+    osmo();
+  });
+  function osmo(){
+    const v0=num($('o_vol').value), osm0=num($('o_osm').value), na0=num($('o_na').value), glu0=num($('o_glu').value),
+          vNaCl=num($('o_nacl').value)||0, vGl=num($('o_gl50').value)||0,
+          vOth=num($('o_oth_v').value)||0, oOth=num($('o_oth_o').value)||0;
+    const reset=t=>{ $('o_ratio').textContent='—'; $('o_result').textContent='—'; $('o_totv').textContent='—';
+      $('o_fna').textContent='—'; $('o_fglu').textContent='—'; $('o_addna').textContent='—'; $('o_addg').textContent='—';
+      setChip($('o_chip'),'none','入力待ち'); $('o_interp').textContent=t; };
+    if(v0===null||v0<=0||osm0===null){ reset('ベースの量と浸透圧(mOsm/L)を入力してください。プリセット選択で代表値が入ります。'); return; }
+    // 総量・総mOsm・Na・糖の集計
+    const totV=v0+vNaCl+vGl+vOth; // mL
+    if(totV<=0){ reset('総量が0です。'); return; }
+    const baseOsm=v0/1000*osm0;
+    const addNaClOsm=vNaCl*O_NACL_OSM, addGlOsm=vGl*O_GL50_OSM, addOthOsm=vOth*oOth;
+    const totOsm=baseOsm+addNaClOsm+addGlOsm+addOthOsm; // mOsm
+    const resultOsm=totOsm/(totV/1000); // mOsm/L
+    const ratio=resultOsm/O_PLASMA;
+    // Na量(mEq): ベース + 10%NaCl添加
+    const addNa=vNaCl*O_NACL_NA;
+    const totNa=(na0!==null?v0/1000*na0:0)+addNa;
+    const fNa=totNa/(totV/1000);
+    // ブドウ糖(g): ベース(%→g/L=×10) + 50%ブドウ糖(0.5g/mL)
+    const addG=vGl*0.5;
+    const totG=(glu0!==null?v0/1000*glu0*10:0)+addG;
+    const fGlu=totG/totV*100; // g/mL*100=%
+    $('o_result').textContent=fmt(resultOsm,0);
+    $('o_ratio').textContent=fmt(ratio,1);
+    $('o_totv').textContent=fmt(totV,0);
+    $('o_fna').textContent=na0!==null?fmt(fNa,0):'—';
+    $('o_fglu').textContent=glu0!==null?fmt(fGlu,1):'—';
+    $('o_addna').textContent=fmt(addNa,1);
+    $('o_addg').textContent=fmt(addG,1);
+    // 判定: 末梢投与の目安(浸透圧比≦3)。ブドウ糖濃度も加味。
+    let cls,txt;
+    if(ratio<=3){ cls='ok'; txt='末梢静脈から投与可の目安(浸透圧比≦3)'; }
+    else if(ratio<=6){ cls='warn'; txt='浸透圧比>3。末梢では静脈炎リスク・希釈や中心静脈を検討'; }
+    else { cls='alert'; txt='浸透圧比が高い。中心静脈路を推奨'; }
+    setChip($('o_chip'),cls,txt);
+    let msg='混注後 '+fmt(resultOsm,0)+' mOsm/L(浸透圧比 '+fmt(ratio,1)+')。';
+    if(glu0!==null&&fGlu>12.5) msg+=' 混注後ブドウ糖濃度 '+fmt(fGlu,1)+'% は末梢の目安(約12.5%)を超えています。';
+    if(ratio>3) msg+=' 末梢投与の目安(浸透圧比≦3)を超えています。希釈量を増やすか中心静脈路をご検討ください。';
+    else msg+=' 末梢投与の目安の範囲内ですが、投与速度・血管・患者状態も踏まえてご判断ください。';
+    $('o_interp').textContent=msg;
+  }
+  ['o_vol','o_osm','o_na','o_glu','o_nacl','o_gl50','o_oth_v','o_oth_o'].forEach(id=>$(id).addEventListener('input',osmo));
+  $('o_clear').addEventListener('click',()=>{
+    ['o_vol','o_osm','o_na','o_glu','o_nacl','o_gl50','o_oth_v','o_oth_o'].forEach(id=>$(id).value='');
+    $('o_preset').value='0'; osmo();
+  });
+  osmo();
+
+  // ===== P/F比(PaO₂/FiO₂) =====
+  // P/F = PaO₂ ÷ (FiO₂/100)。FiO₂は直接入力 or デバイス+流量から推定。
+  // 推定: 鼻カニューラ≒20+4×流量、簡易マスク段階(40/50/60)、リザーバー≒10×流量(6L以上・上限90)。
+  const PF_DEVICES=[
+    {v:'cannula',   n:'鼻カニューラ(1〜6 L/min)'},
+    {v:'simple',    n:'簡易酸素マスク(5〜8 L/min)'},
+    {v:'reservoir', n:'リザーバー付き酸素マスク(6〜10 L/min)'},
+  ];
+  (function(){ const s=$('pf_device'); PF_DEVICES.forEach(d=>{ const op=document.createElement('option'); op.value=d.v; op.textContent=d.n; s.appendChild(op); }); })();
+  let pfMode='direct';
+  function pfEstFiO2(device,flow){
+    if(flow===null||flow<=0) return {fio2:null, basis:'', warn:'酸素流量を入力してください'};
+    if(device==='cannula'){
+      const f=20+4*flow;
+      const w=flow>6?'鼻カニューラは通常6 L/min以下。高流量では推定精度が下がります':'';
+      return {fio2:f, basis:'鼻カニューラ '+fmt(flow,1)+' L/min → 20+4×流量', warn:w};
+    }
+    if(device==='simple'){
+      if(flow<5) return {fio2:null, basis:'', warn:'簡易マスクはCO₂再呼吸回避のため5 L/min以上が必要です'};
+      let f; if(flow<6) f=40; else if(flow<7) f=50; else f=60;
+      const w=flow>8?'簡易マスクは通常8 L/min程度まで':'';
+      return {fio2:f, basis:'簡易マスク '+fmt(flow,1)+' L/min → 段階推定', warn:w};
+    }
+    // reservoir
+    if(flow<6) return {fio2:null, basis:'', warn:'リザーバーマスクはバッグが虚脱しない6 L/min以上が必要です'};
+    const f=Math.min(90,10*flow);
+    const w=flow>=10?'10 L/minでFiO₂は約90%以上(実際はさらに高いことも)':'';
+    return {fio2:f, basis:'リザーバーマスク '+fmt(flow,1)+' L/min → 10×流量(上限90)', warn:w};
+  }
+  document.querySelectorAll('#pf_mode button').forEach(b=>b.addEventListener('click',()=>{
+    pfMode=b.dataset.v;
+    document.querySelectorAll('#pf_mode button').forEach(x=>x.setAttribute('aria-pressed','false'));
+    b.setAttribute('aria-pressed','true');
+    $('pf_direct_wrap').style.display=pfMode==='direct'?'':'none';
+    $('pf_device_wrap').style.display=pfMode==='device'?'':'none';
+    pfCalc();
+  }));
+  function pfCalc(){
+    const pao2=num($('pf_pao2').value);
+    let fio2=null, basis='', warn='';
+    if(pfMode==='direct'){ fio2=num($('pf_fio2').value); }
+    else { const r=pfEstFiO2($('pf_device').value,num($('pf_flow').value)); fio2=r.fio2; basis=r.basis; warn=r.warn; }
+    $('pf_estrow').style.display=(pfMode==='device')?'':'none';
+    $('pf_est').textContent=basis||'—';
+    $('pf_paval').textContent=pao2!==null?fmt(pao2,0):'—';
+    $('pf_usedfio2').textContent=fio2!==null?fmt(fio2,0):'—';
+    if(pao2===null||fio2===null||fio2<=0){
+      $('pf_ratio').textContent='—';
+      setChip($('pf_chip'),'none','入力待ち');
+      $('pf_interp').textContent=warn||'PaO₂とFiO₂を入力するとP/F比を計算します。';
+      return;
+    }
+    if(fio2>100){
+      $('pf_ratio').textContent='—';
+      setChip($('pf_chip'),'none','FiO₂を確認');
+      $('pf_interp').textContent='FiO₂は21〜100%の範囲で入力してください。';
+      return;
+    }
+    const pf=pao2/(fio2/100);
+    $('pf_ratio').textContent=fmt(pf,0);
+    let cls,txt;
+    if(pf>300){ cls='ok'; txt='300超(ARDSのP/F基準は満たさない)'; }
+    else if(pf>200){ cls='warn'; txt='軽症ARDS相当(200<P/F≤300)'; }
+    else if(pf>100){ cls='alert'; txt='中等症ARDS相当(100<P/F≤200)'; }
+    else { cls='alert'; txt='重症ARDS相当(P/F≤100)'; }
+    setChip($('pf_chip'),cls,txt);
+    let msg='P/F比 '+fmt(pf,0)+'(PaO₂ '+fmt(pao2,0)+' / FiO₂ '+fmt(fio2/100,2)+')。';
+    if(warn) msg+=' '+warn+'。';
+    if(pf<=300) msg+=' ARDSはP/F比のみでは診断できません。急性発症・両側性陰影・心不全/溢水で説明不可・PEEP≥5の評価を併せてご確認ください。';
+    else msg+=' 現時点でARDSのP/F基準(≤300)は満たしません。';
+    $('pf_interp').textContent=msg;
+  }
+  ['pf_pao2','pf_fio2','pf_flow'].forEach(id=>$(id).addEventListener('input',pfCalc));
+  $('pf_device').addEventListener('change',pfCalc);
+  $('pf_clear').addEventListener('click',()=>{
+    ['pf_pao2','pf_fio2','pf_flow'].forEach(id=>$(id).value='');
+    pfMode='direct';
+    document.querySelectorAll('#pf_mode button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v==='direct'?'true':'false'));
+    $('pf_direct_wrap').style.display=''; $('pf_device_wrap').style.display='none';
+    $('pf_device').value='cannula'; pfCalc();
+  });
+  pfCalc();
+
+  // ===== ガイドライン・リンク集 =====
+  // 各学会の公式GLページ等。URLはWeb確認済み(2026-07-09時点)。改訂・移設はリンク先で確認。
+  const LINKS=[
+    {cat:'糖尿病・脂質・肥満・代謝', items:[
+      {t:'糖尿病診療ガイドライン2024', y:'2024', org:'日本糖尿病学会', d:'全文PDFを章別に公開', u:'https://www.jds.or.jp/modules/publication/index.php?content_id=4'},
+      {t:'糖尿病治療ガイド・刊行物一覧', org:'日本糖尿病学会', d:'治療ガイド2024ほか', u:'https://www.jds.or.jp/modules/publication/index.php?content_id=1'},
+      {t:'動脈硬化性疾患予防ガイドライン2022年版', y:'2022', org:'日本動脈硬化学会', d:'脂質管理目標・久山町スコア', u:'https://www.j-athero.org/jp/jas_gl2022/'},
+      {t:'肥満症診療ガイドライン2022', y:'2022', org:'日本肥満学会', d:'サイトで全文公開', u:'https://www.jasso.or.jp/'},
+      {t:'高尿酸血症・痛風の治療ガイドライン', org:'日本痛風・尿酸核酸学会', d:'第3版〔2022年追補版〕', u:'https://www.tukaku.jp/guideline/'},
+    ]},
+    {cat:'下垂体・副腎・性腺', items:[
+      {t:'診療ガイドライン・臨床重要課題 一覧', org:'日本内分泌学会', d:'PA・クッシング・副腎不全・ICI内分泌障害・間脳下垂体ほか', u:'https://www.j-endo.jp/modules/edu/index.php?content_id=1'},
+      {t:'原発性アルドステロン症診療ガイドライン2021', y:'2021', org:'日本内分泌学会(J-STAGE)', d:'CLEIA法カットオフ対応', u:'https://www.jstage.jst.go.jp/article/endocrine/97/S.October/97_1/_article/-char/ja'},
+      {t:'間脳下垂体機能障害・尿崩症等の診療ガイドライン2023年版', y:'2023', org:'日本内分泌学会(Minds)', d:'先端巨大症・クッシング病・尿崩症ほか', u:'https://minds.jcqhc.or.jp/summary/c00818/'},
+    ]},
+    {cat:'甲状腺', items:[
+      {t:'甲状腺機能亢進症・低下症などの診断ガイドライン', org:'日本甲状腺学会', d:'各疾患の診断ガイドライン一覧', u:'https://www.japanthyroid.jp/doctor/guideline/index.html'},
+      {t:'バセドウ病治療ガイドライン2019(要約)', y:'2019', org:'日本甲状腺学会(Minds)', d:'', u:'https://minds.jcqhc.or.jp/summary/c00502/'},
+      {t:'甲状腺クリーゼ診療ガイドライン2017 Digest版', y:'2017', org:'日本甲状腺学会・日本内分泌学会', d:'PDF', u:'https://www.japanthyroid.jp/doctor/img/thyroid_storm_or_crisis.pdf'},
+    ]},
+    {cat:'骨・カルシウム代謝', items:[
+      {t:'骨粗鬆症の予防と治療ガイドライン', org:'日本骨粗鬆症学会ほか', d:'ガイドライン出版物一覧', u:'http://www.josteo.com/publications/guideline/'},
+    ]},
+    {cat:'腎・高血圧・電解質', items:[
+      {t:'エビデンスに基づくCKD診療ガイドライン2023', y:'2023', org:'日本腎臓学会', d:'全文PDF公開', u:'https://cdn.jsn.or.jp/medic/guideline/pdf/guide/001-294.pdf'},
+      {t:'高血圧治療ガイドライン2019(JSH2019)', y:'2019', org:'日本高血圧学会', d:'全文PDF公開', u:'https://www.jpnsh.jp/data/jsh2019/JSH2019_hp.pdf'},
+    ]},
+    {cat:'横断・実務', items:[
+      {t:'Minds ガイドラインライブラリ', org:'日本医療機能評価機構', d:'各学会GLの要約・全文を横断検索', u:'https://minds.jcqhc.or.jp/'},
+      {t:'医薬品 添付文書等検索', org:'PMDA', d:'添付文書・インタビューフォーム', u:'https://www.pmda.go.jp/PmdaSearch/iyakuSearch/'},
+    ]},
+  ];
+  (function(){
+    const wrap=$('lk_wrap'); if(!wrap) return;
+    const ICON='<svg class="lk_ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>';
+    LINKS.forEach(g=>{
+      const grp=document.createElement('div'); grp.className='lk_group';
+      const h=document.createElement('h3'); h.textContent=g.cat; grp.appendChild(h);
+      const list=document.createElement('div'); list.className='lk_list';
+      g.items.forEach(it=>{
+        const a=document.createElement('a'); a.className='lk_item'; a.href=it.u; a.target='_blank'; a.rel='noopener noreferrer';
+        let host=''; try{ host=new URL(it.u).host.replace(/^www\./,''); }catch(e){}
+        a.innerHTML=ICON;
+        const tx=document.createElement('div'); tx.className='lk_tx';
+        const tt=document.createElement('div'); tt.className='lk_tt'; tt.textContent=it.t;
+        if(it.y){ const y=document.createElement('span'); y.className='lk_yr'; y.textContent=' '+it.y; tt.appendChild(y); }
+        tx.appendChild(tt);
+        const meta=[it.org,it.d].filter(Boolean).join(' ・ ');
+        if(meta){ const ds=document.createElement('div'); ds.className='lk_ds'; ds.textContent=meta; tx.appendChild(ds); }
+        const hh=document.createElement('div'); hh.className='lk_host'; hh.textContent=host; tx.appendChild(hh);
+        a.appendChild(tx);
+        const ar=document.createElement('span'); ar.className='lk_arrow'; ar.textContent='↗'; a.appendChild(ar);
+        list.appendChild(a);
+      });
+      grp.appendChild(list); wrap.appendChild(grp);
+    });
+  })();
 
   // ===== INSULIN Rx =====
   const today=new Date(); today.setHours(0,0,0,0);
