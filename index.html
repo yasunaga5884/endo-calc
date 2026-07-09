@@ -511,9 +511,10 @@
   <!-- HORMONE REFERENCE RANGES -->
   <section class="panel" id="ref" role="tabpanel">
     <h2>下垂体・副腎 基礎ホルモン基準値</h2>
-    <p class="note">性別・月経周期を選ぶと各項目の該当基準値をハイライトします。<b>代表値であり測定法・施設で異なります。自施設の基準値を優先してください。</b>「要確認」は測定法・年齢依存が特に強い項目です。</p>
+    <p class="note">年齢・性別(女性は月経周期)を選ぶと各項目の基準値を表示します。値は<b>早朝・空腹・安静後採血</b>を前提とした代表値で、測定法・施設で異なります。自施設の基準値を優先してください。年齢を入力するとIGF-1の年齢・性別別基準範囲(−2SD〜+2SD)を表示します。「要確認」は測定法・年齢依存が特に強い項目です。</p>
     <div class="grid">
-      <div class="field full"><label>性別</label><div class="seg" id="r_sex"><button data-v="male" aria-pressed="true">男性</button><button data-v="female" aria-pressed="false">女性</button></div></div>
+      <div class="field"><label>年齢 <span class="u">IGF-1基準用</span></label><div class="inp"><input id="r_age" inputmode="decimal" placeholder="例 45"><span class="unit">歳</span></div></div>
+      <div class="field"><label>性別</label><div class="seg" id="r_sex"><button data-v="male" aria-pressed="true">男性</button><button data-v="female" aria-pressed="false">女性</button></div></div>
       <div class="field full" id="r_phase_wrap" style="display:none"><label>月経周期・閉経</label><div class="seg" id="r_phase">
         <button data-v="follicular" aria-pressed="true">卵胞期</button>
         <button data-v="ovulatory" aria-pressed="false">排卵期</button>
@@ -524,7 +525,7 @@
     <div class="readout">
       <div id="r_list"></div>
     </div>
-    <div class="hint">出典(代表値): 大阪医科薬科大学病院 内分泌検査案内、LSIメディエンス／SRL総合検査案内、原発性アルドステロン症診療ガイドライン2021(CLEIA法)。基準値は測定キット・施設・採血条件(体位・時刻・薬剤)で変動します。診断は必ず自施設の基準値・臨床像・必要に応じ負荷試験と併せて行ってください。</div>
+    <div class="hint">出典(代表値): 大阪医科薬科大学病院 内分泌検査案内、LSIメディエンス／SRL総合検査案内、原発性アルドステロン症診療ガイドライン2021(CLEIA法)。IGF-1の年齢・性別別基準範囲(−2SD〜+2SD)は Isojima T, et al. Endocr J 2012;59:771-780(80歳超は80歳以上の値を表示)。基準値は測定キット・施設・採血条件(体位・時刻・薬剤)で変動します。診断は必ず自施設の基準値・臨床像・必要に応じ負荷試験と併せて行ってください。</div>
   </section>
 
   <!-- STEROID EQUIVALENCE -->
@@ -941,7 +942,7 @@
     {cat:'下垂体前葉・副腎軸', name:'TSH', unit:'µIU/mL', type:'single', v:'0.35–4.94', note:'FT4と併せて評価'},
     {cat:'下垂体前葉・副腎軸', name:'プロラクチン(PRL)', unit:'ng/mL', type:'sex', male:'4.29–13.69', female:'4.91–29.32', note:'薬剤・妊娠・ストレスで上昇。マクロPRLに注意'},
     {cat:'下垂体前葉・副腎軸', name:'成長ホルモン(GH)', unit:'ng/mL', type:'sex', male:'≤2.47', female:'0.13–9.88', note:'負荷前安静時。基礎値の変動が大きく負荷試験で評価', flag:true},
-    {cat:'下垂体前葉・副腎軸', name:'IGF-1(ソマトメジンC)', unit:'ng/mL', type:'single', v:'年齢別基準/SDスコアで評価', note:'年齢・性別依存が強い。施設の年齢別表・SDスコア(±2SD)で判定', flag:true},
+    {cat:'下垂体前葉・副腎軸', name:'IGF-1(ソマトメジンC)', unit:'ng/mL', type:'igf1', v:'年齢を入力', note:'年齢・性別別 −2SD〜+2SD(Isojima 2012)。SDスコアで評価が望ましい', flag:true},
     {cat:'性腺軸', name:'LH', unit:'mIU/mL', type:'phase', male:'0.57–12.07', follicular:'1.80–11.78', ovulatory:'7.59–89.08', luteal:'0.56–14.00', postmeno:'5.16–61.99'},
     {cat:'性腺軸', name:'FSH', unit:'mIU/mL', type:'phase', male:'2.0–8.3', follicular:'3.03–8.08', ovulatory:'2.55–16.69', luteal:'1.38–5.47', postmeno:'26.72–133.41', note:'男性値は代表値', flag:true},
     {cat:'性腺軸', name:'エストラジオール(E2)', unit:'pg/mL', type:'phase', male:'≤54', follicular:'19–226', ovulatory:'49–487', luteal:'78–252', postmeno:'<39', note:'男性値は代表値', flag:true},
@@ -957,6 +958,11 @@
     {cat:'副腎髄質(血漿カテコラミン)', name:'尿中ノルメタネフリン', unit:'mg/日', type:'single', v:'0.09–0.33', note:'代表値(蓄尿)', flag:true},
   ];
   const PHASE_LABEL={follicular:'卵胞期',ovulatory:'排卵期',luteal:'黄体期',postmeno:'閉経後'};
+  // 日本人IGF-1(ソマトメジンC)年齢別・性別 基準範囲 −2SD〜+2SD(ng/mL)。
+  // 出典: Isojima T, Shimatsu A, et al. Endocr J 2012;59:771-780(男性値はPfizer・FALCO両基準表で一致確認)。
+  // index=年齢(0〜79歳)、末尾[80]=80歳以上。
+  const IGF1_M=[[11,149],[14,148],[18,154],[24,164],[32,176],[44,193],[55,215],[63,247],[72,292],[84,350],[99,423],[113,499],[125,557],[133,579],[138,570],[141,552],[142,543],[142,540],[142,526],[143,501],[142,470],[139,436],[135,405],[131,379],[128,356],[125,337],[119,329],[116,322],[114,315],[111,309],[109,303],[107,297],[105,292],[103,287],[102,283],[100,279],[99,275],[97,272],[96,269],[95,266],[94,263],[94,261],[93,259],[92,257],[92,255],[91,253],[90,250],[90,250],[89,248],[88,246],[87,245],[87,243],[86,242],[85,240],[84,239],[84,238],[83,237],[82,236],[81,235],[80,233],[79,232],[77,230],[76,228],[75,226],[73,224],[72,221],[70,219],[68,216],[66,213],[65,209],[63,206],[61,202],[58,198],[56,194],[54,190],[52,185],[50,181],[48,177],[45,172],[43,167],[41,163]];
+  const IGF1_F=[[15,154],[23,186],[32,213],[40,227],[48,238],[56,252],[69,287],[89,357],[111,438],[133,517],[155,588],[175,638],[188,654],[193,643],[193,625],[192,614],[192,611],[191,599],[188,574],[182,539],[175,499],[168,459],[161,425],[155,397],[151,375],[147,358],[146,336],[141,328],[137,320],[133,312],[129,304],[126,297],[122,290],[119,283],[115,277],[112,271],[109,265],[106,260],[103,254],[100,250],[98,245],[95,240],[93,236],[90,233],[88,229],[87,226],[85,224],[83,221],[82,219],[81,218],[80,216],[79,215],[78,213],[77,212],[76,211],[75,210],[74,208],[73,207],[72,205],[71,203],[70,201],[69,198],[68,196],[66,194],[65,191],[64,188],[62,186],[61,183],[60,180],[59,177],[57,175],[56,172],[55,170],[54,167],[53,165],[52,163],[50,160],[49,158],[48,155],[44,152],[43,149]];
   let rSex='male', rPhase='follicular';
   document.querySelectorAll('#r_sex button').forEach(b=>b.addEventListener('click',()=>{
     rSex=b.dataset.v;
@@ -970,7 +976,18 @@
     document.querySelectorAll('#r_phase button').forEach(x=>x.setAttribute('aria-pressed','false'));
     b.setAttribute('aria-pressed','true'); refRender();
   }));
+  $('r_age').addEventListener('input',refRender);
   function refValue(item){
+    if(item.type==='igf1'){
+      const raw=$('r_age').value;
+      const a=parseInt(raw,10);
+      if(raw===''||!isFinite(a)||a<0) return {v:'年齢を入力', basis:''};
+      const tbl=(rSex==='male')?IGF1_M:IGF1_F;
+      const idx=Math.min(a,80);
+      const rng=tbl[idx];
+      const over=(a>80)?'(80歳以上)':'';
+      return {v:rng[0]+'–'+rng[1], basis:(rSex==='male'?'男性':'女性')+' '+a+'歳'+over};
+    }
     if(item.type==='single') return {v:item.v, basis:''};
     if(item.type==='sex') return {v:(rSex==='male'?item.male:item.female), basis:(rSex==='male'?'男性':'女性')};
     if(item.type==='phase'){ if(rSex==='male') return {v:item.male, basis:'男性'}; return {v:item[rPhase], basis:'女性・'+PHASE_LABEL[rPhase]}; }
@@ -1974,7 +1991,7 @@
   // ===== 患者共通情報(全タブ同期) =====
   // 共通バー → 各タブへ一方向同期。タブ側の個別編集は共通バーを上書きしない。
   // 患者情報のためlocalStorage等への保存はしない(リロードでクリア)。
-  const PT_MAP={pt_ht:['b_ht'],pt_wt:['b_wt','e_wt','n_wt'],pt_age:['b_age','e_age','n_age']};
+  const PT_MAP={pt_ht:['b_ht'],pt_wt:['b_wt','e_wt','n_wt'],pt_age:['b_age','e_age','n_age','r_age']};
   Object.keys(PT_MAP).forEach(src=>{
     $(src).addEventListener('input',()=>{
       const v=$(src).value;
