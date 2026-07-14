@@ -614,6 +614,9 @@
       </div>
       <div style="font-size:11.5px;color:var(--muted);margin-top:6px"><span style="color:var(--warn);font-weight:700">◆</span> = ウゴービ・ゼップバウンドの前提条件(高血圧・脂質異常症・2型糖尿病のいずれか1つ以上が必須)</div>
     </div>
+    <div class="optrow">
+      <div class="field" style="flex:0 0 230px"><label>投与開始日 <span class="u">ウゴービ・ゼップバウンドの使用期限を計算・任意</span></label><div class="inp"><input type="date" id="b_drug_start"></div></div>
+    </div>
     <div class="readout">
       <div class="ro-row"><span class="ro-label">BMI</span></div>
       <div class="ro-row" style="margin-top:8px"><span class="ro-main" id="b_bmi">—</span><span class="ro-unit">kg/m²</span></div>
@@ -635,10 +638,16 @@
         <div class="ro-row"><span class="ro-label">肥満症薬物療法の適応目安</span></div>
         <div class="chip none" id="b_dx_chip"><span class="dot"></span><span id="b_dx">入力待ち</span></div>
         <div id="b_drug" style="margin-top:10px"></div>
+        <div id="b_dur_wrap" style="display:none">
+          <div class="ro-div"></div>
+          <div class="ro-row"><span class="ro-label">投与期間の上限(最適使用推進ガイドライン)</span></div>
+          <div id="b_dur" style="margin-top:10px"></div>
+          <div class="interp">開始日(初回投与日)を第1週1日目として計算した目安です。ウゴービは68週間・ゼップバウンドは72週間が投与期間の限度です。実際の中止時期は治療計画・添付文書・最新のガイドラインに従ってください。</div>
+        </div>
         <div class="interp" id="b_drug_interp">身長・体重を入力し、該当する健康障害をチェックすると適応の目安を表示します。</div>
       </div>
     </div>
-    <div class="hint"><b>肥満症治療薬の留意点:</b>ウゴービ(セマグルチド)・ゼップバウンド(チルゼパチド)は最適使用推進ガイドラインにより施設要件・医師要件、6か月以上の食事療法・運動療法を実施しても十分な効果が得られないこと等が定められています。妊婦・妊娠の可能性のある女性には投与しません。サノレックス(マジンドール)は投与期間3か月以内で依存性・肺高血圧症に注意。本判定は目安であり、添付文書・最新のガイドラインを必ず確認してください。</div>
+    <div class="hint"><b>肥満症治療薬の留意点:</b>ウゴービ(セマグルチド)・ゼップバウンド(チルゼパチド)は最適使用推進ガイドラインにより施設要件・医師要件、6か月以上の食事療法・運動療法を実施しても十分な効果が得られないこと等が定められています。投与期間はウゴービ68週間・ゼップバウンド72週間が限度で、投与中も2〜3か月ごとに効果(体重減少等)を評価し、効果不十分なら中止を検討します。妊婦・妊娠の可能性のある女性には投与しません。サノレックス(マジンドール)は投与期間3か月以内で依存性・肺高血圧症に注意。本判定は目安であり、添付文書・最新のガイドラインを必ず確認してください。</div>
     <div class="hint">エネルギー量は「目安」であり、実際の指示は50〜100kcal単位に丸め、病態(肥満症・腎症・高齢者のフレイル等)・体組成・摂食状況に応じて個別化してください。75歳以上はADL・フレイルを踏まえ目標体重を柔軟に判断します。肥満(BMI≧25)ではまず現体重の3%減を目標とします。妊娠中の付加量は食事摂取基準2020(初期+50/中期+250/後期+450kcal)、体重増加の目安は日本産科婦人科学会2021に基づきます。妊娠中の体重減量は行いません。</div>
   </section>
 
@@ -1226,6 +1235,7 @@
       setChip($('b_dx_chip'),'none','入力待ち');
       $('b_drug').innerHTML='';
       $('b_drug_interp').textContent='身長・体重を入力し、該当する健康障害をチェックすると適応の目安を表示します。';
+      renderDur();
       return;
     }
     const h2=Math.pow(ht/100,2), ibw=22*h2;
@@ -1341,12 +1351,41 @@
       drugRow('セマグルチド(ウゴービ)・チルゼパチド(ゼップバウンド)','BMI27以上+健康障害2項目以上 または BMI35以上(◆のいずれか必須)',gCls,gTxt)+
       drugRow('マジンドール(サノレックス)','高度肥満症(BMI35以上)・投与3か月以内',mCls,mTxt);
     $('b_drug_interp').textContent=dnotes.join(' ')||'該当する健康障害をチェックすると判定に反映されます。';
+    renderDur();
+  }
+  // ---- 投与期間の上限(最適使用推進ガイドライン):ウゴービ68週・ゼップバウンド72週 ----
+  function renderDur(){
+    const startStr=$('b_drug_start').value;
+    if(!startStr){ $('b_dur_wrap').style.display='none'; $('b_dur').innerHTML=''; return; }
+    const p=startStr.split('-'),start=new Date(+p[0],+p[1]-1,+p[2]);
+    const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+    $('b_dur').innerHTML=durRow('ウゴービ(セマグルチド)',68,start,today)+durRow('ゼップバウンド(チルゼパチド)',72,start,today);
+    $('b_dur_wrap').style.display='';
+  }
+  function durRow(name,weeks,start,today){
+    const DAY=86400000;
+    const limit=new Date(start.getTime()+(weeks*7-1)*DAY);       // 第weeks週の最終日
+    const lastDose=new Date(start.getTime()+(weeks-1)*7*DAY);    // 週1回投与の最終投与日目安
+    const fd=d=>d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+'('+'日月火水木金土'[d.getDay()]+')';
+    const elapsed=Math.floor((today-start)/DAY);
+    const curWeek=Math.floor(elapsed/7)+1;
+    const remainW=weeks-curWeek;
+    let col,st;
+    if(elapsed<0){ col='#8EA29A'; st='開始前(あと'+Math.ceil(-elapsed/7)+'週)'; }
+    else if(curWeek>weeks){ col='#F1A0AA'; st='期限超過('+(curWeek-weeks)+'週経過)'; }
+    else if(remainW<=8){ col='#F2C572'; st='現在 第'+curWeek+'週・残り'+remainW+'週'; }
+    else { col='#7EE0AE'; st='現在 第'+curWeek+'週・残り'+remainW+'週'; }
+    return '<div class="supply"><div class="sname">'+name+'<span>上限'+weeks+'週間・最終投与目安 '+fd(lastDose)+'</span></div>'+
+      '<div class="sval"><div class="big"><b style="font-size:16px">'+fd(limit)+'</b><span class="un">まで</span></div>'+
+      '<div class="ssub" style="color:'+col+'">'+st+'</div></div></div>';
   }
   function drugRow(name,sub,cls,txt){
     const col=cls==='ok'?'#7EE0AE':cls==='warn'?'#F2C572':cls==='alert'?'#F1A0AA':'#8EA29A';
     return '<div class="supply"><div class="sname">'+name+'<span>'+sub+'</span></div><div class="sval"><div style="font-size:13px;font-weight:700;color:'+col+'">'+txt+'</div></div></div>';
   }
   ['b_ht','b_wt','b_age','b_prewt'].forEach(id=>$(id).addEventListener('input',bmiCalc));
+  $('b_drug_start').addEventListener('change',bmiCalc);
+  $('b_drug_start').addEventListener('input',bmiCalc);
   document.querySelectorAll('#b_obs input').forEach(c=>c.addEventListener('change',bmiCalc));
 
   // ===== Na CORRECTION (物質収支) =====
